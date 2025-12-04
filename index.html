@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Collision Chain-Reaction Balls</title>
+<style>
+  body {
+    margin: 0;
+    background: #020617;
+    overflow: hidden;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  canvas {
+    display: block;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
+
+// ---------------- CONFIG ----------------
+const INITIAL_BALLS = 20;
+const BALL_RADIUS = 7;
+const BASE_SPEED = 2.4;
+const TRAIL_FADE = 0.15;   // lower = longer trails
+const MAX_BALLS = 6000;    // raise or remove this if you want true death
+const SPAWN_COOLDOWN_FRAMES = 3;
+
+// ---------------- UTIL ----------------
+function randRange(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function randomColor() {
+  return `hsl(${Math.random() * 360}, 80%, 60%)`;
+}
+
+// ---------------- BALL CLASS ----------------
+class Ball {
+  constructor(x, y, vx, vy, r, color) {
+    this.x = x;
+    this.y = y;
+    this.vx = vx;
+    this.vy = vy;
+    this.r = r;
+    this.color = color;
+    this.lastSpawnFrame = -9999;
+  }
+
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+
+    // bounce off walls
+    if (this.x - this.r < 0) {
+      this.x = this.r;
+      this.vx *= -1;
+    } else if (this.x + this.r > canvas.width) {
+      this.x = canvas.width - this.r;
+      this.vx *= -1;
+    }
+
+    if (this.y - this.r < 0) {
+      this.y = this.r;
+      this.vy *= -1;
+    } else if (this.y + this.r > canvas.height) {
+      this.y = canvas.height - this.r;
+      this.vy *= -1;
+    }
+  }
+
+  draw() {
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ---------------- WORLD SETUP ----------------
+let balls = [];
+
+function createRandomBall() {
+  const angle = Math.random() * Math.PI * 2;
+  const speed = randRange(BASE_SPEED * 0.5, BASE_SPEED * 1.5);
+  const vx = Math.cos(angle) * speed;
+  const vy = Math.sin(angle) * speed;
+  const x = randRange(BALL_RADIUS * 4, canvas.width - BALL_RADIUS * 4);
+  const y = randRange(BALL_RADIUS * 4, canvas.height - BALL_RADIUS * 4);
+  return new Ball(x, y, vx, vy, BALL_RADIUS, randomColor());
+}
+
+for (let i = 0; i < INITIAL_BALLS; i++) {
+  balls.push(createRandomBall());
+}
+
+// distance squared
+function distSq(a, b) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return dx * dx + dy * dy;
+}
+
+// elastic-ish collision (simplified)
+function resolveCollision(b1, b2) {
+  const dx = b2.x - b1.x;
+  const dy = b2.y - b1.y;
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+  const overlap = (b1.r + b2.r) - dist;
+
+  // separate them so they don't stick
+  if (overlap > 0) {
+    const nx = dx / dist;
+    const ny = dy / dist;
+    const half = overlap / 2;
+    b1.x -= nx * half;
+    b1.y -= ny * half;
+    b2.x += nx * half;
+    b2.y += ny * half;
+
+    // swap velocity along normal
+    const v1n = b1.vx * nx + b1.vy * ny;
+    const v2n = b2.vx * nx + b2.vy * ny;
+
+    const v1t = -b1.vx * ny + b1.vy * nx;
+    const v2t = -b2.vx * ny + b2.vy * nx;
+
+    // 1D elastic: swap normal components
+    const v1nAfter = v2n;
+    const v2nAfter = v1n;
+
+    // back to x/y
+    b1.vx = v1nAfter * nx - v1t * ny;
+    b1.vy = v1nAfter * ny + v1t * nx;
+
+    b2.vx = v2nAfter * nx - v2t * ny;
+    b2.vy = v2nAfter * ny + v2t * nx;
+  }
+}
+
+// ---------------- ANIMATION LOOP ----------------
+let frame = 0;
+let lastTime = performance.now();
+let fps = 0;
+
+function animate(now) {
+  frame++;
+
+  // FPS calc
+  const dt = now - lastTime;
+  fps = fps * 0.9 + (1000 / dt) * 0.1;
+  lastTime = now;
+
+  requestAnimationFrame(animate);
+
+  // trails
+  ctx.fillStyle = `rgba(2, 6, 23, ${TRAIL_FADE})`;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const newBalls = [];
+
+  // move
+  for (const b of balls) {
+    b.update();
+  }
+
+  // collisions (O(n^2), gets nasty when ball count is big)
+  const len = balls.length;
+  const rr = (BALL_RADIUS * 2) * (BALL_RADIUS * 2);
+
+  for (let i = 0; i < len; i++) {
+    for (let j = i + 1; j < len; j++) {
+      const b1 = balls[i];
+      const b2 = balls[j];
+
+      if (!b1 || !b2) continue;
+
+      if (distSq(b1, b2) <= rr) {
+        resolveCollision(b1, b2);
+
+        // spawn new ball at collision point if allowed
+        if (
+          balls.length + newBalls.length < MAX_BALLS &&
+          frame > b1.lastSpawnFrame + SPAWN_COOLDOWN_FRAMES &&
+          frame > b2.lastSpawnFrame + SPAWN_COOLDOWN_FRAMES
+        ) {
+          const mx = (b1.x + b2.x) / 2;
+          const my = (b1.y + b2.y) / 2;
+          const angle = Math.random() * Math.PI * 2;
+          const speed = randRange(BASE_SPEED * 0.8, BASE_SPEED * 2.0);
+
+          const nb = new Ball(
+            mx, my,
+            Math.cos(angle) * speed,
+            Math.sin(angle) * speed,
+            BALL_RADIUS,
+            randomColor()
+          );
+
+          b1.lastSpawnFrame = frame;
+          b2.lastSpawnFrame = frame;
+          newBalls.push(nb);
+        }
+      }
+    }
+  }
+
+  // merge new balls
+  if (newBalls.length) {
+    balls.push(...newBalls);
+  }
+
+  // draw balls
+  for (const b of balls) {
+    b.draw();
+  }
+
+  // HUD
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.font = "14px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+  ctx.textBaseline = "top";
+  ctx.fillText(`Balls: ${balls.length}`, 12, 10);
+  ctx.fillText(`FPS: ${fps.toFixed(1)}`, 12, 28);
+  ctx.fillText(`Collisions spawn more balls`, 12, 46);
+}
+
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
