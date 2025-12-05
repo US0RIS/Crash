@@ -4,9 +4,6 @@
 <meta charset="UTF-8" />
 <title>Collision Chain-Reaction — Cyber HUD Edition</title>
 <style>
-/* -------------------------------------------------------
-   GLOBAL STYLE
--------------------------------------------------------*/
 html, body {
   margin: 0;
   padding: 0;
@@ -16,9 +13,6 @@ html, body {
 }
 canvas { display: block; }
 
-/* -------------------------------------------------------
-   GLOSS OVERLAY (behind menu, over plane)
--------------------------------------------------------*/
 #overlay {
   position: fixed;
   inset: 0;
@@ -27,9 +21,6 @@ canvas { display: block; }
   z-index: 10;
 }
 
-/* -------------------------------------------------------
-   START MENU UI (centered)
--------------------------------------------------------*/
 #uiPanel {
   position: fixed;
   left: 50%;
@@ -49,7 +40,6 @@ canvas { display: block; }
   text-align: center;
   min-width: 280px;
 }
-
 #uiPanel h1 {
   margin: 0 0 8px;
   font-size: 22px;
@@ -62,7 +52,6 @@ canvas { display: block; }
   font-size: 13px;
   color: #9cc9ff;
 }
-
 #uiPanel label {
   display: block;
   margin-bottom: 6px;
@@ -71,7 +60,6 @@ canvas { display: block; }
   letter-spacing: 0.08em;
   color: #8be9ff;
 }
-
 #uiPanel input {
   width: 120px;
   padding: 6px 8px;
@@ -87,7 +75,6 @@ canvas { display: block; }
 #uiPanel input:focus {
   box-shadow: 0 0 0 1px rgba(0,255,255,0.6);
 }
-
 #uiPanel button {
   margin-top: 16px;
   width: 100%;
@@ -103,20 +90,13 @@ canvas { display: block; }
   text-transform: uppercase;
   box-shadow: 0 0 18px rgba(0,234,255,0.35);
 }
-#uiPanel button:hover {
-  filter: brightness(1.08);
-}
-
-/* small helper text */
+#uiPanel button:hover { filter: brightness(1.08); }
 #uiPanel .hint {
   margin-top: 10px;
   font-size: 11px;
   opacity: 0.7;
 }
 
-/* -------------------------------------------------------
-   HIGHSCORE PANEL
--------------------------------------------------------*/
 #highscorePanel {
   position: fixed;
   right: 12px;
@@ -133,9 +113,6 @@ canvas { display: block; }
   z-index: 25;
 }
 
-/* -------------------------------------------------------
-   SMALL CYBER HUD (always visible after start)
--------------------------------------------------------*/
 #hudSmall {
   position: fixed;
   left: 12px;
@@ -160,9 +137,6 @@ canvas { display: block; }
   margin-top: 6px;
 }
 
-/* -------------------------------------------------------
-   DEV CONSOLE (hidden until "~" key)
--------------------------------------------------------*/
 #devConsole {
   position: fixed;
   right: 0;
@@ -179,7 +153,6 @@ canvas { display: block; }
   backdrop-filter: blur(6px);
   z-index: 40;
 }
-
 .consoleSectionTitle {
   font-size: 15px;
   margin-top: 14px;
@@ -188,8 +161,6 @@ canvas { display: block; }
   border-bottom: 1px solid rgba(0,255,255,0.2);
   padding-bottom: 4px;
 }
-
-/* log panel */
 #logPanel {
   height: 180px;
   overflow-y: auto;
@@ -203,6 +174,28 @@ canvas { display: block; }
   margin-bottom: 4px;
   color: #d2faff;
 }
+
+/* dev console controls */
+.controlRow {
+  margin: 6px 0;
+}
+.controlBtn {
+  padding: 4px 8px;
+  margin: 2px 4px 2px 0;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(0,255,255,0.3);
+  background: rgba(0,30,60,0.8);
+  color: #d9f7ff;
+  cursor: pointer;
+}
+.controlBtn:hover {
+  background: rgba(0,255,255,0.12);
+}
+#timeScaleLabel {
+  font-weight: 600;
+  color: #7af0ff;
+}
 </style>
 </head>
 
@@ -214,10 +207,8 @@ canvas { display: block; }
 <div id="uiPanel">
   <h1>Collision Chain-Reaction</h1>
   <p>Select how many balls to spawn, then unleash chaos.</p>
-
   <label for="ballCount">Starting Balls</label>
   <input type="number" id="ballCount" min="1" max="2000" value="20" />
-
   <button id="startBtn">Go</button>
   <div class="hint">Press ~ in-game to open the full Cyber Dev Console.</div>
 </div>
@@ -234,6 +225,29 @@ canvas { display: block; }
   <div class="consoleSectionTitle">Performance</div>
   <div id="perfDetails"></div>
 
+  <div class="consoleSectionTitle">Controls</div>
+  <div id="controlsPanel">
+    <div>Time Scale: <span id="timeScaleLabel">1.0x</span></div>
+    <div class="controlRow">
+      <button class="controlBtn speedBtn" data-speed="0.25">0.25×</button>
+      <button class="controlBtn speedBtn" data-speed="0.5">0.5×</button>
+      <button class="controlBtn speedBtn" data-speed="1">1×</button>
+      <button class="controlBtn speedBtn" data-speed="2">2×</button>
+      <button class="controlBtn speedBtn" data-speed="4">4×</button>
+      <button class="controlBtn" id="btnPause">Pause</button>
+    </div>
+    <div class="controlRow">
+      <button class="controlBtn" id="btnRestart">Restart Run</button>
+      <button class="controlBtn" id="btnHalf">Despawn 50%</button>
+      <button class="controlBtn" id="btnNuke">Despawn 90%</button>
+    </div>
+    <div class="controlRow">
+      <button class="controlBtn" id="btnAdd1">Add 1</button>
+      <button class="controlBtn" id="btnAdd5">Add 5</button>
+      <button class="controlBtn" id="btnAdd10">Add 10</button>
+    </div>
+  </div>
+
   <div class="consoleSectionTitle">Stress Score</div>
   <div id="stressPanel"></div>
 
@@ -244,9 +258,6 @@ canvas { display: block; }
 <div id="highscorePanel"></div>
 
 <script>
-/* ============================================================================================
-   UTILS
-============================================================================================ */
 function formatBig(n){
   if (n >= 1e9) return (n/1e9).toFixed(2) + "B";
   if (n >= 1e6) return (n/1e6).toFixed(2) + "M";
@@ -254,52 +265,79 @@ function formatBig(n){
   return String(n);
 }
 
-/* ============================================================================================
-   CRASH-PERSISTENT HIGH SCORE SYSTEM
-============================================================================================ */
 function loadJSON(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key)) || fallback; }
   catch { return fallback; }
 }
+
+// ----- High score + last-state -----
 let lastState = loadJSON("chainBalls_lastState", null);
 let highScore = loadJSON("chainBalls_highScore", {
-  maxBalls: 0, fps: 0, timestamp: null
+  maxBalls: 0,
+  fps: 0,
+  timestamp: null
 });
-const now = Date.now();
-const CRASH_THRESHOLD_MS = 3000;
-if (lastState && now - lastState.timestamp > CRASH_THRESHOLD_MS) {
-  if (lastState.balls > highScore.maxBalls) {
-    highScore = {
-      maxBalls: lastState.balls,
-      fps: lastState.fps,
-      timestamp: new Date(lastState.timestamp).toLocaleString()
-    };
-    localStorage.setItem("chainBalls_highScore", JSON.stringify(highScore));
-  }
+
+if (lastState && typeof lastState.balls === "number" && lastState.balls > highScore.maxBalls) {
+  highScore = {
+    maxBalls: lastState.balls,
+    fps: lastState.fps || 0,
+    timestamp: lastState.timestamp ? new Date(lastState.timestamp).toLocaleString() : null
+  };
+  localStorage.setItem("chainBalls_highScore", JSON.stringify(highScore));
 }
-// initial placeholder; will be updated every second by saveState()
+
 localStorage.setItem("chainBalls_lastState", JSON.stringify({
   balls: 0, fps: 0, timestamp: Date.now()
 }));
 
-/* ============================================================================================
-   CANVAS SETUP
-============================================================================================ */
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
-function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
-resize(); addEventListener("resize", resize);
+let canvasArea = 1;
+function resize(){
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+  canvasArea = canvas.width * canvas.height;
+}
+resize();
+addEventListener("resize", resize);
 
-/* ============================================================================================
-   BALL PHYSICS
-============================================================================================ */
 let INITIAL_BALLS = 20;
 const BALL_RADIUS = 7;
 const BASE_SPEED = 2.4;
 const TRAIL_FADE = 0.15;
 const SPAWN_COOLDOWN_FRAMES = 3;
-
 const CELL_SIZE = BALL_RADIUS * 4;
+const CIRCLE_AREA = Math.PI * BALL_RADIUS * BALL_RADIUS;
+
+let trailsDisabled = false;
+const TRAIL_COVERAGE_THRESHOLD = 0.9;
+let lastCoverageCheckFrame = 0;
+
+// time scaling / pause
+let timeScale = 1;
+let isPaused = false;
+let lastNonZeroScale = 1;
+
+// achievement tracking
+const ACHIEVEMENT_THRESHOLDS = [
+  10,
+  100,
+  1000,
+  10000,
+  100000,
+  1000000,
+  10000000
+];
+let unlockedAchievements = new Set();
+let simStartTime = null;
+
+function formatElapsed(ms){
+  const totalSec = Math.floor(ms / 1000);
+  const mins = Math.floor(totalSec / 60);
+  const secs = totalSec % 60;
+  return `${mins}:${secs.toString().padStart(2,"0")}`;
+}
 
 function randRange(a,b){ return a + Math.random()*(b-a); }
 function randomColor(){ return `hsl(${Math.random()*360},80%,60%)`; }
@@ -310,7 +348,9 @@ class Ball {
     this.color=color; this.lastSpawnFrame=-9999;
   }
   update(){
-    this.x+=this.vx; this.y+=this.vy;
+    const s = timeScale;
+    this.x += this.vx * s;
+    this.y += this.vy * s;
     if(this.x-this.r<0){ this.x=this.r; this.vx*=-1; }
     else if(this.x+this.r>canvas.width){ this.x=canvas.width-this.r; this.vx*=-1; }
     if(this.y-this.r<0){ this.y=this.r; this.vy*=-1; }
@@ -339,17 +379,16 @@ function createRandomBall(){
 }
 function spawnInitialBalls(count){
   balls = [];
+  trailsDisabled = false;
+  lastCoverageCheckFrame = 0;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
   for(let i=0;i<count;i++) balls.push(createRandomBall());
 }
 
-/* ============================================================================================
-   COLLISION (SPATIAL GRID)
-============================================================================================ */
 function distSq(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return dx*dx+dy*dy; }
 
 let pairChecks = 0;
 let actualCollisions = 0;
-
 function cellKey(cx,cy){ return cx + "," + cy; }
 let grid = new Map();
 
@@ -369,7 +408,6 @@ function resolveCollision(b1,b2){
     const v2t=-b2.vx*ny + b2.vy*nx;
 
     const v1nA=v2n, v2nA=v1n;
-
     b1.vx = v1nA*nx - v1t*ny;
     b1.vy = v1nA*ny + v1t*nx;
     b2.vx = v2nA*nx - v2t*ny;
@@ -377,9 +415,6 @@ function resolveCollision(b1,b2){
   }
 }
 
-/* ============================================================================================
-   PERFORMANCE TRACKING + STATE SAVE
-============================================================================================ */
 let frame = 0;
 let lastFrameTimestamp = performance.now();
 let dtLastFrame = 16.6;
@@ -434,7 +469,6 @@ function getPerfStats(){
   return {cpu, usedRAM, totalRAM};
 }
 
-// 🔁 CRASH STATE SAVER – this is what makes high score work
 function saveState() {
   localStorage.setItem("chainBalls_lastState", JSON.stringify({
     balls: balls.length,
@@ -444,9 +478,6 @@ function saveState() {
 }
 setInterval(saveState, 1000);
 
-/* ============================================================================================
-   DEV CONSOLE + LOGGING
-============================================================================================ */
 let devOpen = false;
 document.addEventListener("keydown", e=>{
   if(e.key==="`" || e.key==="~"){
@@ -465,9 +496,7 @@ function addLog(msg){
   logPanel.scrollTop = logPanel.scrollHeight;
 }
 
-/* ============================================================================================
-   SMALL HUD
-============================================================================================ */
+// HUD + graphs
 const hudSmall = document.getElementById("hudSmall");
 const hudText = document.getElementById("hudText");
 const graphCanvasFPS = document.getElementById("graphFPS");
@@ -479,9 +508,96 @@ const graphCanvasSPAWN = document.getElementById("graphSPAWN");
   g.height = 35;
 });
 
-/* ============================================================================================
-   MAIN LOOP
-============================================================================================ */
+// dev controls elements
+const timeScaleLabel = document.getElementById("timeScaleLabel");
+document.querySelectorAll(".speedBtn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    const s = parseFloat(btn.getAttribute("data-speed"));
+    timeScale = s;
+    isPaused = false;
+    lastNonZeroScale = s;
+    timeScaleLabel.textContent = s.toFixed(2).replace(/\.00$/,"") + "x";
+    addLog("Time scale set to " + s + "x");
+  });
+});
+
+// pause button
+document.getElementById("btnPause").addEventListener("click", ()=>{
+  if (!isPaused) {
+    if (timeScale > 0) lastNonZeroScale = timeScale;
+    timeScale = 0;
+    isPaused = true;
+    timeScaleLabel.textContent = "Paused";
+    addLog("Simulation paused");
+  } else {
+    timeScale = lastNonZeroScale || 1;
+    isPaused = false;
+    timeScaleLabel.textContent = timeScale.toFixed(2).replace(/\.00$/,"") + "x";
+    addLog("Simulation resumed at " + timeScale + "x");
+  }
+});
+
+document.getElementById("btnRestart").addEventListener("click", ()=>{
+  spawnInitialBalls(INITIAL_BALLS);
+  unlockedAchievements.clear();
+  simStartTime = Date.now();
+  addLog("Run restarted with " + INITIAL_BALLS + " balls.");
+});
+
+// helper: keep random subset of balls
+function keepRandomFraction(fraction){
+  const old = balls.length;
+  if (old === 0) return;
+  let keep = Math.floor(old * fraction);
+  if (keep < 1 && old > 0) keep = 1;
+
+  for (let i = 0; i < keep; i++) {
+    const j = i + Math.floor(Math.random() * (old - i));
+    const tmp = balls[i];
+    balls[i] = balls[j];
+    balls[j] = tmp;
+  }
+  balls.length = keep;
+
+  trailsDisabled = false;
+  lastCoverageCheckFrame = frame;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  addLog(`Despawned ${(100 - fraction*100).toFixed(0)}% of balls: ${old} → ${balls.length}`);
+}
+
+document.getElementById("btnHalf").addEventListener("click", ()=>{
+  keepRandomFraction(0.5);
+});
+
+document.getElementById("btnNuke").addEventListener("click", ()=>{
+  keepRandomFraction(0.1);
+});
+
+// add-balls helper + buttons
+function addBalls(count){
+  for(let i=0;i<count;i++){
+    balls.push(createRandomBall());
+  }
+  addLog("Added " + count + " ball" + (count===1 ? "" : "s") +
+         " (total: " + balls.length + ")");
+}
+document.getElementById("btnAdd1").addEventListener("click", ()=>addBalls(1));
+document.getElementById("btnAdd5").addEventListener("click", ()=>addBalls(5));
+document.getElementById("btnAdd10").addEventListener("click", ()=>addBalls(10));
+
+// achievement check
+function checkAchievements(){
+  if (simStartTime == null) return;
+  const now = Date.now();
+  for (const th of ACHIEVEMENT_THRESHOLDS) {
+    if (!unlockedAchievements.has(th) && balls.length >= th) {
+      unlockedAchievements.add(th);
+      const elapsed = formatElapsed(now - simStartTime);
+      addLog(`${elapsed} after start - ${th.toLocaleString()} balls reached`);
+    }
+  }
+}
+
 function animate(timestamp){
   frame++;
 
@@ -499,91 +615,118 @@ function animate(timestamp){
 
   requestAnimationFrame(animate);
 
-  ctx.fillStyle = `rgba(2,6,23,${TRAIL_FADE})`;
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+  if (!trailsDisabled) {
+    ctx.fillStyle = `rgba(2,6,23,${TRAIL_FADE})`;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+  }
 
   pairChecks = 0;
   actualCollisions = 0;
 
-  for(const b of balls) b.update();
+  if (!isPaused) {
+    // physics + collisions + spawning only when not paused
+    for(const b of balls) b.update();
 
-  grid.clear();
-  for(const b of balls){
-    const cx = (b.x / CELL_SIZE) | 0;
-    const cy = (b.y / CELL_SIZE) | 0;
-    const key = cellKey(cx,cy);
-    let cell = grid.get(key);
-    if(!cell){
-      cell = { cx, cy, balls: [] };
-      grid.set(key, cell);
-    }
-    cell.balls.push(b);
-  }
-
-  const rr = (BALL_RADIUS*2)**2;
-  const neighborOffsets = [
-    [0,0],
-    [1,0],
-    [0,1],
-    [1,1],
-    [-1,1]
-  ];
-
-  const newBalls = [];
-
-  function processPair(b1,b2){
-    if (b1 === b2) return;
-    pairChecks++;
-    if(distSq(b1,b2)<=rr){
-      actualCollisions++;
-      resolveCollision(b1,b2);
-      if(frame>b1.lastSpawnFrame+SPAWN_COOLDOWN_FRAMES &&
-         frame>b2.lastSpawnFrame+SPAWN_COOLDOWN_FRAMES){
-        const dx=b2.x-b1.x, dy=b2.y-b1.y;
-        const dist=Math.hypot(dx,dy)||1;
-        const nx=dx/dist, ny=dy/dist;
-        const spawnDist=BALL_RADIUS*1.3;
-        const mx=b1.x+nx*spawnDist;
-        const my=b1.y+ny*spawnDist;
-        const angle=Math.random()*Math.PI*2;
-        const speed=randRange(BASE_SPEED*2,BASE_SPEED*4);
-        newBalls.push(new Ball(
-          mx,my,
-          Math.cos(angle)*speed,
-          Math.sin(angle)*speed,
-          BALL_RADIUS,
-          randomColor()
-        ));
-        b1.lastSpawnFrame = frame;
-        b2.lastSpawnFrame = frame;
+    grid.clear();
+    for(const b of balls){
+      const cx = (b.x / CELL_SIZE) | 0;
+      const cy = (b.y / CELL_SIZE) | 0;
+      const key = cellKey(cx,cy);
+      let cell = grid.get(key);
+      if(!cell){
+        cell = { cx, cy, balls: [] };
+        grid.set(key, cell);
       }
-    }
-  }
-
-  for(const cell of grid.values()){
-    const {cx, cy, balls: cellBalls} = cell;
-
-    for(let i=0;i<cellBalls.length;i++){
-      for(let j=i+1;j<cellBalls.length;j++){
-        processPair(cellBalls[i], cellBalls[j]);
-      }
+      cell.balls.push(b);
     }
 
-    for(const [ox,oy] of neighborOffsets){
-      if(ox===0 && oy===0) continue;
-      const nk = cellKey(cx+ox, cy+oy);
-      const other = grid.get(nk);
-      if(!other) continue;
-      const otherBalls = other.balls;
-      for(const b1 of cellBalls){
-        for(const b2 of otherBalls){
-          processPair(b1,b2);
+    const rr = (BALL_RADIUS*2)**2;
+    const neighborOffsets = [
+      [0,0],
+      [1,0],
+      [0,1],
+      [1,1],
+      [-1,1]
+    ];
+
+    const newBalls = [];
+    function processPair(b1,b2){
+      if (b1 === b2) return;
+      pairChecks++;
+      if(distSq(b1,b2)<=rr){
+        actualCollisions++;
+        resolveCollision(b1,b2);
+        if(frame>b1.lastSpawnFrame+SPAWN_COOLDOWN_FRAMES &&
+           frame>b2.lastSpawnFrame+SPAWN_COOLDOWN_FRAMES){
+          const dx=b2.x-b1.x, dy=b2.y-b1.y;
+          const dist=Math.hypot(dx,dy)||1;
+          const nx=dx/dist, ny=dy/dist;
+          const spawnDist=BALL_RADIUS*1.3;
+          const mx=b1.x+nx*spawnDist;
+          const my=b1.y+ny*spawnDist;
+          const angle=Math.random()*Math.PI*2;
+          const speed=randRange(BASE_SPEED*2,BASE_SPEED*4);
+          newBalls.push(new Ball(
+            mx,my,
+            Math.cos(angle)*speed,
+            Math.sin(angle)*speed,
+            BALL_RADIUS,
+            randomColor()
+          ));
+          b1.lastSpawnFrame = frame;
+          b2.lastSpawnFrame = frame;
         }
       }
     }
+
+    for(const cell of grid.values()){
+      const {cx, cy, balls: cellBalls} = cell;
+
+      for(let i=0;i<cellBalls.length;i++){
+        for(let j=i+1;j<cellBalls.length;j++){
+          processPair(cellBalls[i], cellBalls[j]);
+        }
+      }
+
+      for(const [ox,oy] of neighborOffsets){
+        if(ox===0 && oy===0) continue;
+        const nk = cellKey(cx+ox, cy+oy);
+        const other = grid.get(nk);
+        if(!other) continue;
+        const otherBalls = other.balls;
+        for(const b1 of cellBalls){
+          for(const b2 of otherBalls){
+            processPair(b1,b2);
+          }
+        }
+      }
+    }
+
+    balls.push(...newBalls);
+
+    // coverage → kill trails
+    if (!trailsDisabled && frame - lastCoverageCheckFrame >= 15 && canvasArea > 0) {
+      lastCoverageCheckFrame = frame;
+      const coverage = (balls.length * CIRCLE_AREA) / canvasArea;
+      if (coverage >= TRAIL_COVERAGE_THRESHOLD) {
+        trailsDisabled = true;
+        addLog("Trails disabled: coverage ≈ " + (coverage*100).toFixed(1) + "%");
+      }
+    }
+
+    // live high score
+    if (balls.length > highScore.maxBalls) {
+      highScore.maxBalls = balls.length;
+      highScore.fps = fps;
+      highScore.timestamp = new Date().toLocaleString();
+      localStorage.setItem("chainBalls_highScore", JSON.stringify(highScore));
+    }
+
+    // achievements (only progress when actually simulating)
+    checkAchievements();
   }
 
-  balls.push(...newBalls);
+  // draw always (so the frozen scene still shows while paused)
   for(const b of balls) b.draw();
 
   const stats = getPerfStats();
@@ -593,6 +736,10 @@ function animate(timestamp){
     (1-Math.min(fps,60)/60)*200
   );
 
+  const timeLabel = isPaused
+    ? "Paused"
+    : timeScale.toFixed(2) + "x";
+
   hudText.innerHTML = `
     Balls: ${balls.length}<br>
     FPS: ${fps.toFixed(1)}<br>
@@ -601,6 +748,8 @@ function animate(timestamp){
     Pair Checks: ${formatBig(pairChecks)}<br>
     Collisions: ${formatBig(actualCollisions)}<br>
     Spawn Rate: ${spawnRate.toFixed(1)}/s<br>
+    Time Scale: ${timeLabel}<br>
+    Trails: ${trailsDisabled ? "OFF" : "ON"}<br>
     RAM: ${
       stats.usedRAM ? stats.usedRAM.toFixed(1)+" / "+stats.totalRAM.toFixed(1)+" MB" : "N/A"
     }<br>
@@ -631,7 +780,9 @@ function animate(timestamp){
       Balls: ${balls.length}<br>
       Pair Checks (last frame): ${formatBig(pairChecks)}<br>
       Collisions (last frame): ${formatBig(actualCollisions)}<br>
-      Spawns/sec: ${spawnRate.toFixed(1)}
+      Spawns/sec: ${spawnRate.toFixed(1)}<br>
+      Time Scale: ${timeLabel}<br>
+      Trails: ${trailsDisabled ? "OFF" : "ON"}
     `;
     document.getElementById("stressPanel").innerHTML =
       `Stress Score: <b>${stress.toFixed(0)}</b>`;
@@ -639,25 +790,21 @@ function animate(timestamp){
 
   document.getElementById("highscorePanel").innerHTML =
     `High Score: <b>${highScore.maxBalls}</b><br>
-     FPS at Crash: <b>${highScore.fps.toFixed(1)}</b><br>
+     FPS at Peak: <b>${highScore.fps.toFixed(1)}</b><br>
      When: ${highScore.timestamp || "—"}`;
 }
 
-/* ============================================================================================
-   START BUTTON HANDLING
-============================================================================================ */
 const overlay = document.getElementById("overlay");
-
 document.getElementById("startBtn").onclick = ()=>{
   INITIAL_BALLS = Math.max(1, Math.min(2000,
     Number(document.getElementById("ballCount").value)
   ));
   spawnInitialBalls(INITIAL_BALLS);
-
+  unlockedAchievements.clear();
+  simStartTime = Date.now();
   hudSmall.style.display = "block";
   document.getElementById("uiPanel").style.display = "none";
   overlay.style.display = "none";
-
   addLog("Simulation started with "+INITIAL_BALLS+" balls.");
 };
 
