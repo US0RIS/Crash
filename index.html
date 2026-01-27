@@ -1,814 +1,1903 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<title>Collision Chain-Reaction — Cyber HUD Edition</title>
-<style>
-html, body {
-  margin: 0;
-  padding: 0;
-  background: #020617;
-  overflow: hidden;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-}
-canvas { display: block; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Business Empire Simulator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-#overlay {
-  position: fixed;
-  inset: 0;
-  background: radial-gradient(circle at center, rgba(15,23,42,0.3), rgba(15,23,42,0.9));
-  backdrop-filter: blur(4px);
-  z-index: 10;
-}
+        body {
+            font-family: 'Courier New', monospace;
+            background: var(--bg-color);
+            color: var(--ui-color);
+            padding: 20px;
+            line-height: 1.4;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
 
-#uiPanel {
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  padding: 20px 26px;
-  background: rgba(0, 10, 40, 0.85);
-  border: 1px solid rgba(0,255,255,0.45);
-  border-radius: 14px;
-  backdrop-filter: blur(8px);
-  color: #e0f7ff;
-  z-index: 20;
-  font-size: 16px;
-  box-shadow:
-    0 0 20px rgba(0,255,255,0.25),
-    0 30px 80px rgba(0,0,0,0.8);
-  text-align: center;
-  min-width: 280px;
-}
-#uiPanel h1 {
-  margin: 0 0 8px;
-  font-size: 22px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #7af0ff;
-}
-#uiPanel p {
-  margin: 0 0 14px;
-  font-size: 13px;
-  color: #9cc9ff;
-}
-#uiPanel label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #8be9ff;
-}
-#uiPanel input {
-  width: 120px;
-  padding: 6px 8px;
-  font-size: 15px;
-  margin-top: 2px;
-  border-radius: 8px;
-  border: 1px solid rgba(0,255,255,0.4);
-  outline: none;
-  background: rgba(15,23,42,0.9);
-  color: #e5f6ff;
-  text-align: center;
-}
-#uiPanel input:focus {
-  box-shadow: 0 0 0 1px rgba(0,255,255,0.6);
-}
-#uiPanel button {
-  margin-top: 16px;
-  width: 100%;
-  padding: 10px;
-  font-size: 16px;
-  border: none;
-  border-radius: 10px;
-  background: linear-gradient(90deg, #00eaff, #4f46e5);
-  color: #0b1020;
-  cursor: pointer;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  box-shadow: 0 0 18px rgba(0,234,255,0.35);
-}
-#uiPanel button:hover { filter: brightness(1.08); }
-#uiPanel .hint {
-  margin-top: 10px;
-  font-size: 11px;
-  opacity: 0.7;
-}
+        :root {
+            --bg-color: #000;
+            --ui-color: #0f0;
+            --ui-hover: #003300;
+            --warning-color: #f00;
+            --success-color: #0ff;
+        }
 
-#highscorePanel {
-  position: fixed;
-  right: 12px;
-  top: 10px;
-  color: white;
-  padding: 8px 14px;
-  background: rgba(0, 20, 40, 0.2);
-  border-radius: 8px;
-  border: 1px solid rgba(0,255,255,0.2);
-  font-size: 13px;
-  pointer-events: none;
-  white-space: nowrap;
-  backdrop-filter: blur(3px);
-  z-index: 25;
-}
+        .game-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            border: 2px solid var(--ui-color);
+            padding: 20px;
+            background: var(--bg-color);
+        }
 
-#hudSmall {
-  position: fixed;
-  left: 12px;
-  top: 12px;
-  padding: 10px 12px;
-  background: rgba(0, 20, 40, 0.2);
-  color: #b9e6ff;
-  border: 1px solid rgba(0,255,255,0.25);
-  border-radius: 10px;
-  font-size: 13px;
-  display: none;
-  pointer-events: none;
-  backdrop-filter: blur(4px);
-  z-index: 30;
-}
-.hudGraph {
-  width: 120px;
-  height: 35px;
-  background: rgba(0,255,255,0.05);
-  border: 1px solid rgba(0,255,255,0.2);
-  border-radius: 6px;
-  margin-top: 6px;
-}
+        .settings-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-color);
+            color: var(--ui-color);
+            border: 2px solid var(--ui-color);
+            padding: 10px 15px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            z-index: 999;
+        }
 
-#devConsole {
-  position: fixed;
-  right: 0;
-  top: 0;
-  width: 340px;
-  height: 100%;
-  background: rgba(0, 10, 40, 0.86);
-  border-left: 1px solid rgba(0,255,255,0.35);
-  color: #b9e6ff;
-  padding: 14px;
-  box-sizing: border-box;
-  display: none;
-  overflow-y: auto;
-  backdrop-filter: blur(6px);
-  z-index: 40;
-}
-.consoleSectionTitle {
-  font-size: 15px;
-  margin-top: 14px;
-  margin-bottom: 6px;
-  color: #74f0ff;
-  border-bottom: 1px solid rgba(0,255,255,0.2);
-  padding-bottom: 4px;
-}
-#logPanel {
-  height: 180px;
-  overflow-y: auto;
-  background: rgba(0,255,255,0.05);
-  border: 1px solid rgba(0,255,255,0.2);
-  padding: 6px;
-  border-radius: 6px;
-  font-size: 12px;
-}
-.logEntry {
-  margin-bottom: 4px;
-  color: #d2faff;
-}
+        .settings-btn:hover {
+            background: var(--ui-color);
+            color: var(--bg-color);
+        }
 
-/* dev console controls */
-.controlRow {
-  margin: 6px 0;
-}
-.controlBtn {
-  padding: 4px 8px;
-  margin: 2px 4px 2px 0;
-  font-size: 12px;
-  border-radius: 6px;
-  border: 1px solid rgba(0,255,255,0.3);
-  background: rgba(0,30,60,0.8);
-  color: #d9f7ff;
-  cursor: pointer;
-}
-.controlBtn:hover {
-  background: rgba(0,255,255,0.12);
-}
-#timeScaleLabel {
-  font-weight: 600;
-  color: #7af0ff;
-}
-</style>
+        .settings-panel {
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            background: var(--bg-color);
+            border: 2px solid var(--ui-color);
+            padding: 20px;
+            z-index: 1000;
+            min-width: 320px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .settings-panel h3 {
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--ui-color);
+            padding-bottom: 5px;
+        }
+
+        .color-preview {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 2px solid var(--ui-color);
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        .color-picker-group {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid var(--ui-color);
+        }
+
+        .color-picker-group label {
+            display: block;
+            margin: 10px 0;
+        }
+
+        .color-picker-group input[type="color"] {
+            width: 60px;
+            height: 40px;
+            border: 2px solid var(--ui-color);
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .company-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding: 10px;
+            border: 1px solid var(--ui-color);
+        }
+
+        .company-tab {
+            background: var(--bg-color);
+            color: var(--ui-color);
+            border: 2px solid var(--ui-color);
+            padding: 10px 15px;
+            cursor: pointer;
+            white-space: nowrap;
+            min-width: 150px;
+            text-align: center;
+        }
+
+        .company-tab:hover {
+            background: var(--ui-hover);
+        }
+
+        .company-tab.active {
+            background: var(--ui-color);
+            color: var(--bg-color);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+            border: 2px solid var(--ui-color);
+            padding: 10px;
+        }
+
+        .stat-item {
+            padding: 5px;
+            border-bottom: 1px solid var(--ui-hover);
+        }
+
+        .stat-item:last-child {
+            border-bottom: none;
+        }
+
+        .event-container {
+            border: 2px solid var(--ui-color);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .event-title {
+            font-size: 18px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--ui-color);
+        }
+
+        .event-description {
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .choices {
+            display: grid;
+            gap: 10px;
+        }
+
+        .choice-button {
+            background: var(--bg-color);
+            color: var(--ui-color);
+            border: 2px solid var(--ui-color);
+            padding: 15px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            text-align: left;
+        }
+
+        .choice-button:hover:not(:disabled) {
+            background: var(--ui-color);
+            color: var(--bg-color);
+        }
+
+        .choice-button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .choice-button.ignore {
+            border-color: var(--warning-color);
+            color: var(--warning-color);
+        }
+
+        .choice-button.ignore:hover:not(:disabled) {
+            background: var(--warning-color);
+            color: var(--bg-color);
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .action-button {
+            background: var(--bg-color);
+            color: var(--ui-color);
+            border: 2px solid var(--ui-color);
+            padding: 12px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            text-align: center;
+        }
+
+        .action-button:hover:not(:disabled) {
+            background: var(--ui-color);
+            color: var(--bg-color);
+        }
+
+        .action-button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        button {
+            background: var(--bg-color);
+            color: var(--ui-color);
+            border: 2px solid var(--ui-color);
+            padding: 12px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: var(--ui-color);
+            color: var(--bg-color);
+        }
+
+        .title {
+            text-align: center;
+            font-size: 32px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--ui-color);
+            padding-bottom: 10px;
+            letter-spacing: 3px;
+        }
+
+        .warning { color: var(--warning-color); }
+        .success { color: var(--success-color); }
+
+        .business-type, .difficulty-option {
+            border: 2px solid var(--ui-color);
+            padding: 15px;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+
+        .business-type:hover, .difficulty-option:hover {
+            background: var(--ui-hover);
+        }
+
+        .business-type.selected, .difficulty-option.selected {
+            background: var(--ui-color);
+            color: var(--bg-color);
+        }
+
+        .hidden { display: none !important; }
+
+        .tab-buttons {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 10px;
+            font-size: 12px;
+            background: var(--bg-color);
+            color: var(--ui-color);
+            border: 2px solid var(--ui-color);
+        }
+
+        .tab-button.active {
+            background: var(--ui-color);
+            color: var(--bg-color);
+        }
+
+        .action-log {
+            background: var(--bg-color);
+            border: 1px solid var(--ui-color);
+            padding: 15px;
+            margin-bottom: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 11px;
+        }
+
+        .loan-section {
+            border: 2px solid var(--ui-color);
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .loan-section h3 {
+            margin-bottom: 10px;
+        }
+
+        .loan-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 10px;
+        }
+
+        .debt-warning {
+            background: var(--bg-color);
+            border: 2px solid var(--warning-color);
+            padding: 15px;
+            margin-bottom: 20px;
+            color: var(--warning-color);
+        }
+
+        .portfolio-summary {
+            border: 2px solid var(--ui-color);
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .portfolio-summary h3 {
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--ui-color);
+            padding-bottom: 5px;
+        }
+
+        input, select, textarea {
+            background: var(--bg-color);
+            color: var(--ui-color);
+            border: 2px solid var(--ui-color);
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            width: 100%;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--success-color);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal-content {
+            background: var(--bg-color);
+            padding: 30px;
+            border: 3px solid var(--ui-color);
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--ui-color);
+            padding-bottom: 10px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+        }
+
+        @media (max-width: 768px) {
+            .actions { grid-template-columns: 1fr; }
+            .stats { grid-template-columns: 1fr 1fr; }
+            .loan-grid { grid-template-columns: 1fr; }
+        }
+
+        .report-box {
+            border: 2px solid var(--ui-color);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .result-box {
+            border: 2px solid var(--ui-color);
+            padding: 20px;
+            margin-bottom: 20px;
+            min-height: 100px;
+        }
+
+        pre {
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        .form-group {
+            margin: 15px 0;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .loan-options-inline {
+            border: 2px solid var(--success-color);
+            padding: 15px;
+            margin: 15px 0;
+            background: var(--ui-hover);
+        }
+
+        .loan-options-inline h4 {
+            color: var(--success-color);
+            margin-bottom: 10px;
+        }
+
+        .color-option {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            cursor: pointer;
+            padding: 8px;
+            border: 2px solid transparent;
+        }
+
+        .color-option:hover {
+            border-color: var(--ui-color);
+        }
+
+        .color-option input[type="radio"] {
+            width: auto;
+            margin-right: 10px;
+        }
+
+        .settings-section {
+            margin: 20px 0;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--ui-hover);
+        }
+
+        .settings-section:last-of-type {
+            border-bottom: none;
+        }
+
+        .custom-color-display {
+            display: inline-block;
+            padding: 5px 10px;
+            border: 1px solid var(--ui-color);
+            margin-left: 10px;
+            font-size: 12px;
+        }
+    </style>
 </head>
-
 <body>
-<canvas id="c"></canvas>
+    <button class="settings-btn" onclick="toggleSettings()">SETTINGS</button>
+    
+    <div id="settingsPanel" class="settings-panel hidden">
+        <h3>SETTINGS</h3>
+        
+        <div class="settings-section">
+            <label style="display: block; margin: 15px 0;">
+                Game Speed:
+                <select id="speedSelect">
+                    <option value="slow">Slow</option>
+                    <option value="normal" selected>Normal</option>
+                    <option value="fast">Fast</option>
+                </select>
+            </label>
+        </div>
 
-<div id="overlay"></div>
+        <div class="settings-section">
+            <strong style="display: block; margin-bottom: 10px;">Color Presets:</strong>
+            
+            <div class="color-option" onclick="changeColors('#000', '#0f0')">
+                <input type="radio" name="colorScheme" value="green" checked>
+                <span>Classic (Green on Black)</span>
+                <span class="color-preview" style="background: #0f0;"></span>
+            </div>
 
-<div id="uiPanel">
-  <h1>Collision Chain-Reaction</h1>
-  <p>Select how many balls to spawn, then unleash chaos.</p>
-  <label for="ballCount">Starting Balls</label>
-  <input type="number" id="ballCount" min="1" max="2000" value="20" />
-  <button id="startBtn">Go</button>
-  <div class="hint">Press ~ in-game to open the full Cyber Dev Console.</div>
-</div>
+            <div class="color-option" onclick="changeColors('#000', '#00ffff')">
+                <input type="radio" name="colorScheme" value="cyan">
+                <span>Cyan on Black</span>
+                <span class="color-preview" style="background: #00ffff;"></span>
+            </div>
 
-<div id="hudSmall">
-  <div id="hudText"></div>
-  <canvas id="graphFPS" class="hudGraph"></canvas>
-  <canvas id="graphCPU" class="hudGraph"></canvas>
-  <canvas id="graphRAM" class="hudGraph"></canvas>
-  <canvas id="graphSPAWN" class="hudGraph"></canvas>
-</div>
+            <div class="color-option" onclick="changeColors('#000', '#ff00ff')">
+                <input type="radio" name="colorScheme" value="magenta">
+                <span>Magenta on Black</span>
+                <span class="color-preview" style="background: #ff00ff;"></span>
+            </div>
 
-<div id="devConsole">
-  <div class="consoleSectionTitle">Performance</div>
-  <div id="perfDetails"></div>
+            <div class="color-option" onclick="changeColors('#000', '#ffff00')">
+                <input type="radio" name="colorScheme" value="yellow">
+                <span>Yellow on Black</span>
+                <span class="color-preview" style="background: #ffff00;"></span>
+            </div>
 
-  <div class="consoleSectionTitle">Controls</div>
-  <div id="controlsPanel">
-    <div>Time Scale: <span id="timeScaleLabel">1.0x</span></div>
-    <div class="controlRow">
-      <button class="controlBtn speedBtn" data-speed="0.25">0.25×</button>
-      <button class="controlBtn speedBtn" data-speed="0.5">0.5×</button>
-      <button class="controlBtn speedBtn" data-speed="1">1×</button>
-      <button class="controlBtn speedBtn" data-speed="2">2×</button>
-      <button class="controlBtn speedBtn" data-speed="4">4×</button>
-      <button class="controlBtn" id="btnPause">Pause</button>
+            <div class="color-option" onclick="changeColors('#000', '#ff8800')">
+                <input type="radio" name="colorScheme" value="orange">
+                <span>Orange on Black</span>
+                <span class="color-preview" style="background: #ff8800;"></span>
+            </div>
+
+            <div class="color-option" onclick="changeColors('#1a1a2e', '#0f0')">
+                <input type="radio" name="colorScheme" value="darkblue">
+                <span>Green on Dark Blue</span>
+                <span class="color-preview" style="background: #1a1a2e; border: 1px solid #0f0;"></span>
+            </div>
+
+            <div class="color-option" onclick="changeColors('#ffffff', '#000000')">
+                <input type="radio" name="colorScheme" value="light">
+                <span>Black on White</span>
+                <span class="color-preview" style="background: #ffffff; border: 1px solid #000;"></span>
+            </div>
+
+            <div class="color-option" onclick="changeColors('#2b2b2b', '#ffffff')">
+                <input type="radio" name="colorScheme" value="gray">
+                <span>White on Dark Gray</span>
+                <span class="color-preview" style="background: #2b2b2b; border: 1px solid #fff;"></span>
+            </div>
+
+            <div class="color-option" onclick="changeColors('#1e1e1e', '#00d4ff')">
+                <input type="radio" name="colorScheme" value="blue">
+                <span>Blue on Dark</span>
+                <span class="color-preview" style="background: #00d4ff;"></span>
+            </div>
+
+            <div class="color-option" onclick="changeColors('#0d1117', '#58a6ff')">
+                <input type="radio" name="colorScheme" value="github">
+                <span>GitHub Dark</span>
+                <span class="color-preview" style="background: #58a6ff;"></span>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <strong style="display: block; margin-bottom: 10px;">Custom Colors:</strong>
+            
+            <div class="color-picker-group">
+                <label>
+                    Background Color:
+                    <input type="color" id="bgColorPicker" value="#000000" onchange="applyCustomColors()">
+                    <span class="custom-color-display" id="bgColorValue">#000000</span>
+                </label>
+                
+                <label>
+                    Text/UI Color:
+                    <input type="color" id="uiColorPicker" value="#00ff00" onchange="applyCustomColors()">
+                    <span class="custom-color-display" id="uiColorValue">#00ff00</span>
+                </label>
+
+                <button onclick="applyCustomColors()" style="width: 100%; margin-top: 10px;">Apply Custom Colors</button>
+            </div>
+        </div>
+
+        <div class="settings-section">
+            <button onclick="restartGame()" style="width: 100%; margin-bottom: 10px; border-color: var(--warning-color); color: var(--warning-color);">RESTART GAME</button>
+            <button onclick="toggleSettings()" style="width: 100%;">CLOSE</button>
+        </div>
     </div>
-    <div class="controlRow">
-      <button class="controlBtn" id="btnRestart">Restart Run</button>
-      <button class="controlBtn" id="btnHalf">Despawn 50%</button>
-      <button class="controlBtn" id="btnNuke">Despawn 90%</button>
+
+    <div id="transferModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-title">TRANSFER FUNDS</div>
+            <p style="margin-bottom: 15px;">Move money between companies</p>
+            <label>
+                FROM: <span id="fromCompanyName"></span><br>
+                Available: $<span id="availableCash">0</span>
+            </label>
+            <label>
+                TO:<br>
+                <select id="targetCompany"></select>
+            </label>
+            <label>
+                AMOUNT:<br>
+                <input type="number" id="transferAmount" placeholder="Enter amount" min="0">
+            </label>
+            <div class="modal-buttons">
+                <button onclick="confirmTransfer()">TRANSFER</button>
+                <button onclick="closeTransferModal()">CANCEL</button>
+            </div>
+        </div>
     </div>
-    <div class="controlRow">
-      <button class="controlBtn" id="btnAdd1">Add 1</button>
-      <button class="controlBtn" id="btnAdd5">Add 5</button>
-      <button class="controlBtn" id="btnAdd10">Add 10</button>
+
+    <div id="productModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-title">NEW PRODUCT DEVELOPMENT</div>
+            
+            <div class="form-group">
+                <label>Product Name:</label>
+                <input type="text" id="productName" placeholder="Enter product name">
+            </div>
+
+            <div class="form-group">
+                <label>Product Type:</label>
+                <select id="productType">
+                    <option value="">-- Select Type --</option>
+                    <option value="premium">Premium (High price, high quality)</option>
+                    <option value="standard">Standard (Balanced price/quality)</option>
+                    <option value="budget">Budget (Low price, volume sales)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Marketing Strategy:</label>
+                <select id="marketingStrategy">
+                    <option value="">-- Select Strategy --</option>
+                    <option value="aggressive">Aggressive (+$5000 cost, max reach)</option>
+                    <option value="moderate">Moderate (+$2500 cost, good reach)</option>
+                    <option value="minimal">Minimal (+$500 cost, organic growth)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Target Market:</label>
+                <select id="targetMarket">
+                    <option value="">-- Select Market --</option>
+                    <option value="youth">Youth (18-25)</option>
+                    <option value="professional">Professionals (25-45)</option>
+                    <option value="senior">Seniors (45+)</option>
+                    <option value="all">Mass Market (All ages)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Development Budget:</label>
+                <select id="devBudget">
+                    <option value="">-- Select Budget --</option>
+                    <option value="low">Low ($5,000)</option>
+                    <option value="medium">Medium ($10,000)</option>
+                    <option value="high">High ($20,000)</option>
+                </select>
+            </div>
+
+            <div style="border: 1px solid var(--ui-color); padding: 10px; margin: 15px 0;">
+                <strong>TOTAL COST: $<span id="productTotalCost">0</span></strong><br>
+                <span id="productEstimate" style="font-size: 12px;"></span>
+            </div>
+
+            <div id="productLoanOptions" class="loan-options-inline hidden">
+                <h4>NEED FUNDS? TAKE A LOAN:</h4>
+                <button class="action-button" onclick="quickLoanFromModal(5000, 250, 36)" style="width: 100%; margin: 5px 0;">
+                    Micro: +$5K (-$250/mo x36)
+                </button>
+                <button class="action-button" onclick="quickLoanFromModal(10000, 500, 36)" style="width: 100%; margin: 5px 0;">
+                    Small: +$10K (-$500/mo x36)
+                </button>
+                <button class="action-button" onclick="quickLoanFromModal(30000, 1500, 36)" style="width: 100%; margin: 5px 0;">
+                    Business: +$30K (-$1500/mo x36)
+                </button>
+            </div>
+
+            <div class="modal-buttons">
+                <button onclick="confirmProduct()">LAUNCH PRODUCT</button>
+                <button onclick="closeProductModal()">CANCEL</button>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <div class="consoleSectionTitle">Stress Score</div>
-  <div id="stressPanel"></div>
+    <div class="game-container">
+        <div class="title">BUSINESS EMPIRE SIMULATOR</div>
+        
+        <div id="difficultyScreen">
+            <h2 style="margin-bottom: 20px;">SELECT DIFFICULTY</h2>
+            
+            <div class="difficulty-option" onclick="selectDifficulty('easy')">
+                <strong>EASY MODE</strong><br>
+                Start with some revenue and customers<br>
+                Forgiving market conditions<br>
+                Slower stat decay<br>
+                Good for learning the game
+            </div>
+            
+            <div class="difficulty-option" onclick="selectDifficulty('hard')">
+                <strong>HARD MODE (REALISTIC)</strong><br>
+                Start with $20,000 but ZERO revenue<br>
+                Must build customer base from scratch<br>
+                Realistic business challenges<br>
+                Faster stat decay and tougher events<br>
+                True to real business difficulty
+            </div>
+        </div>
 
-  <div class="consoleSectionTitle">Logs</div>
-  <div id="logPanel"></div>
-</div>
+        <div id="setupScreen" class="hidden">
+            <h2 style="margin-bottom: 20px;">CREATE YOUR BUSINESS</h2>
+            <input type="text" id="playerName" placeholder="Your name" value="Alex Smith">
+            <input type="text" id="companyName" placeholder="Company name" value="TechCorp">
+            
+            <h3 style="margin: 30px 0 15px 0; border-bottom: 1px solid var(--ui-color); padding-bottom: 5px;">CHOOSE BUSINESS TYPE</h3>
+            
+            <div class="business-type" onclick="selectBusiness('tech')">
+                <strong>TECH STARTUP</strong><br>
+                High growth, volatile market<br>
+                <span id="tech-stats"></span>
+            </div>
+            
+            <div class="business-type" onclick="selectBusiness('retail')">
+                <strong>RETAIL STORE</strong><br>
+                Steady income, inventory focus<br>
+                <span id="retail-stats"></span>
+            </div>
+            
+            <div class="business-type" onclick="selectBusiness('restaurant')">
+                <strong>RESTAURANT</strong><br>
+                High volume, quality critical<br>
+                <span id="restaurant-stats"></span>
+            </div>
+            
+            <div class="business-type" onclick="selectBusiness('consulting')">
+                <strong>CONSULTING FIRM</strong><br>
+                Reputation dependent, high margins<br>
+                <span id="consulting-stats"></span>
+            </div>
+            
+            <div class="business-type" onclick="selectBusiness('ecommerce')">
+                <strong>E-COMMERCE</strong><br>
+                Online sales, scalable<br>
+                <span id="ecommerce-stats"></span>
+            </div>
+            
+            <button onclick="startGame()" style="width: 100%; padding: 15px; margin-top: 20px;">START GAME</button>
+        </div>
 
-<div id="highscorePanel"></div>
+        <div id="gameScreen" class="hidden">
+            <div id="portfolioSummary" class="portfolio-summary hidden">
+                <h3>PORTFOLIO OVERVIEW</h3>
+                <pre id="portfolioContent"></pre>
+            </div>
 
-<script>
-function formatBig(n){
-  if (n >= 1e9) return (n/1e9).toFixed(2) + "B";
-  if (n >= 1e6) return (n/1e6).toFixed(2) + "M";
-  if (n >= 1e3) return (n/1e3).toFixed(1) + "K";
-  return String(n);
-}
+            <div id="debtWarning" class="debt-warning hidden"></div>
+            <div id="companySelector" class="company-selector"></div>
 
-function loadJSON(key, fallback) {
-  try { return JSON.parse(localStorage.getItem(key)) || fallback; }
-  catch { return fallback; }
-}
+            <div class="stats">
+                <div class="stat-item">CASH: $<span id="cash">0</span></div>
+                <div class="stat-item">MONTH: <span id="month">1</span></div>
+                <div class="stat-item">EMPLOYEES: <span id="employees">0</span></div>
+                <div class="stat-item">REPUTATION: <span id="reputation">0</span>/100</div>
+                <div class="stat-item">CUSTOMERS: <span id="customers">0</span></div>
+                <div class="stat-item">QUALITY: <span id="quality">0</span>/100</div>
+                <div class="stat-item">REVENUE/MO: $<span id="revenue">0</span></div>
+                <div class="stat-item">EXPENSES/MO: $<span id="expenses">0</span></div>
+                <div class="stat-item">MORALE: <span id="morale">0</span>/100</div>
+                <div class="stat-item">DEBT: <span id="debtCapacity">0</span>%</div>
+            </div>
 
-// ----- High score + last-state -----
-let lastState = loadJSON("chainBalls_lastState", null);
-let highScore = loadJSON("chainBalls_highScore", {
-  maxBalls: 0,
-  fps: 0,
-  timestamp: null
-});
+            <div id="monthlyReportScreen" class="hidden">
+                <div class="report-box">
+                    <h3>MONTHLY REPORT - MONTH <span id="reportMonth"></span></h3>
+                    <pre id="reportContent"></pre>
+                </div>
+                <button onclick="showEvent()" style="width: 100%; padding: 15px;">CONTINUE</button>
+            </div>
 
-if (lastState && typeof lastState.balls === "number" && lastState.balls > highScore.maxBalls) {
-  highScore = {
-    maxBalls: lastState.balls,
-    fps: lastState.fps || 0,
-    timestamp: lastState.timestamp ? new Date(lastState.timestamp).toLocaleString() : null
-  };
-  localStorage.setItem("chainBalls_highScore", JSON.stringify(highScore));
-}
+            <div id="eventScreen" class="hidden">
+                <div class="event-container">
+                    <div class="event-title" id="eventTitle"></div>
+                    <div class="event-description" id="eventDescription"></div>
+                    <div id="eventLoanOptions" class="loan-options-inline hidden">
+                        <h4>NEED FUNDS FOR THESE OPTIONS? TAKE A LOAN:</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;">
+                            <button class="action-button" onclick="quickLoanFromEvent(5000, 250, 36)">
+                                Micro: +$5K<br>-$250/mo x36
+                            </button>
+                            <button class="action-button" onclick="quickLoanFromEvent(10000, 500, 36)">
+                                Small: +$10K<br>-$500/mo x36
+                            </button>
+                            <button class="action-button" onclick="quickLoanFromEvent(30000, 1500, 36)">
+                                Business: +$30K<br>-$1500/mo x36
+                            </button>
+                        </div>
+                    </div>
+                    <div class="choices" id="eventChoices"></div>
+                </div>
+            </div>
 
-localStorage.setItem("chainBalls_lastState", JSON.stringify({
-  balls: 0, fps: 0, timestamp: Date.now()
-}));
+            <div id="freeActionScreen" class="hidden">
+                <div class="result-box" id="eventResult"></div>
+                
+                <div class="loan-section">
+                    <h3>FINANCING (DEBT: <span id="currentDebt">0</span>%)</h3>
+                    <div class="loan-grid">
+                        <button class="action-button" onclick="quickLoan(5000, 250, 36)">
+                            MICRO LOAN<br>+$5,000<br>-$250/mo x36<br>Max: 20% debt
+                        </button>
+                        <button class="action-button" onclick="quickLoan(10000, 500, 36)">
+                            SMALL LOAN<br>+$10,000<br>-$500/mo x36<br>Max: 30% debt
+                        </button>
+                        <button class="action-button" onclick="quickLoan(30000, 1500, 36)">
+                            BUSINESS LOAN<br>+$30,000<br>-$1,500/mo x36<br>Max: 50% | Rep: 50+
+                        </button>
+                        <button class="action-button" onclick="quickLoan(75000, 3500, 36)">
+                            CREDIT LINE<br>+$75,000<br>-$3,500/mo x36<br>Max: 65% | Rep: 70+
+                        </button>
+                    </div>
+                </div>
 
-const canvas = document.getElementById("c");
-const ctx = canvas.getContext("2d");
-let canvasArea = 1;
-function resize(){
-  canvas.width = innerWidth;
-  canvas.height = innerHeight;
-  canvasArea = canvas.width * canvas.height;
-}
-resize();
-addEventListener("resize", resize);
+                <div class="action-log">
+                    <strong>ACTION LOG:</strong>
+                    <div id="logContent" style="margin-top: 5px;">No actions taken this month.</div>
+                </div>
 
-let INITIAL_BALLS = 20;
-const BALL_RADIUS = 7;
-const BASE_SPEED = 2.4;
-const TRAIL_FADE = 0.15;
-const SPAWN_COOLDOWN_FRAMES = 3;
-const CELL_SIZE = BALL_RADIUS * 4;
-const CIRCLE_AREA = Math.PI * BALL_RADIUS * BALL_RADIUS;
+                <div class="tab-buttons">
+                    <button class="tab-button active" onclick="showTab('ops')">OPERATIONS</button>
+                    <button class="tab-button" onclick="showTab('growth')">GROWTH</button>
+                    <button class="tab-button" onclick="showTab('finance')">FINANCE</button>
+                    <button class="tab-button" onclick="showTab('marketing')">MARKETING</button>
+                    <button class="tab-button" onclick="showTab('empire')">EMPIRE</button>
+                </div>
 
-let trailsDisabled = false;
-const TRAIL_COVERAGE_THRESHOLD = 0.9;
-let lastCoverageCheckFrame = 0;
+                <div id="opsTab" class="actions"></div>
+                <div id="growthTab" class="actions hidden"></div>
+                <div id="financeTab" class="actions hidden"></div>
+                <div id="marketingTab" class="actions hidden"></div>
+                <div id="empireTab" class="actions hidden"></div>
 
-// time scaling / pause
-let timeScale = 1;
-let isPaused = false;
-let lastNonZeroScale = 1;
+                <button onclick="nextMonth()" style="width: 100%; padding: 15px; margin-top: 15px;">ADVANCE TO NEXT MONTH</button>
+            </div>
 
-// achievement tracking
-const ACHIEVEMENT_THRESHOLDS = [
-  10,
-  100,
-  1000,
-  10000,
-  100000,
-  1000000,
-  10000000
-];
-let unlockedAchievements = new Set();
-let simStartTime = null;
+            <div id="victoryScreen" class="hidden">
+                <div class="result-box" style="text-align: center;">
+                    <h2 style="margin-bottom: 20px;">VICTORY!</h2>
+                    <pre id="victoryContent"></pre>
+                </div>
+                <button onclick="continueAfterVictory()" style="width: 100%; padding: 15px; margin-bottom: 10px;">CONTINUE</button>
+                <button onclick="resetGame()" style="width: 100%; padding: 15px;">NEW GAME</button>
+            </div>
 
-function formatElapsed(ms){
-  const totalSec = Math.floor(ms / 1000);
-  const mins = Math.floor(totalSec / 60);
-  const secs = totalSec % 60;
-  return `${mins}:${secs.toString().padStart(2,"0")}`;
-}
+            <div id="gameOverScreen" class="hidden">
+                <div class="result-box" style="text-align: center;">
+                    <h2 class="warning" style="margin-bottom: 20px;">BANKRUPTCY</h2>
+                    <pre id="gameOverContent"></pre>
+                </div>
+                <button onclick="closeCompany()" style="width: 100%; padding: 15px; margin-bottom: 10px;">CLOSE COMPANY</button>
+                <button onclick="resetGame()" style="width: 100%; padding: 15px;">NEW GAME</button>
+            </div>
+        </div>
+    </div>
 
-function randRange(a,b){ return a + Math.random()*(b-a); }
-function randomColor(){ return `hsl(${Math.random()*360},80%,60%)`; }
+    <script>
+        let selectedBiz = null, selectedDifficulty = null, currentTab = 'ops', actions = [], companies = [], activeIdx = 0, nextId = 1;
+        let gameSpeed = { slow: 1.5, normal: 1, fast: 0.7 };
+        let isHardMode = false;
+        let currentEventChoices = [];
 
-class Ball {
-  constructor(x,y,vx,vy,r,color){
-    this.x=x; this.y=y; this.vx=vx; this.vy=vy; this.r=r;
-    this.color=color; this.lastSpawnFrame=-9999;
-  }
-  update(){
-    const s = timeScale;
-    this.x += this.vx * s;
-    this.y += this.vy * s;
-    if(this.x-this.r<0){ this.x=this.r; this.vx*=-1; }
-    else if(this.x+this.r>canvas.width){ this.x=canvas.width-this.r; this.vx*=-1; }
-    if(this.y-this.r<0){ this.y=this.r; this.vy*=-1; }
-    else if(this.y+this.r>canvas.height){ this.y=canvas.height-this.r; this.vy*=-1; }
-  }
-  draw(){
-    ctx.fillStyle=this.color;
-    ctx.beginPath();
-    ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
-    ctx.fill();
-  }
-}
+        const bizTypes = {
+            easy: {
+                tech: { name: 'Tech Startup', cash: 8000, emp: 0, qual: 40, cust: 30, rep: 35, rev: 2800, exp: 800 },
+                retail: { name: 'Retail Store', cash: 10000, emp: 0, qual: 50, cust: 80, rep: 45, rev: 4000, exp: 1200 },
+                restaurant: { name: 'Restaurant', cash: 7000, emp: 0, qual: 45, cust: 60, rep: 40, rev: 4500, exp: 1500 },
+                consulting: { name: 'Consulting', cash: 12000, emp: 0, qual: 60, cust: 20, rep: 55, rev: 5500, exp: 800 },
+                ecommerce: { name: 'E-Commerce', cash: 9000, emp: 0, qual: 45, cust: 50, rep: 38, rev: 3200, exp: 900 }
+            },
+            hard: {
+                tech: { name: 'Tech Startup', cash: 20000, emp: 0, qual: 20, cust: 0, rep: 10, rev: 0, exp: 500 },
+                retail: { name: 'Retail Store', cash: 20000, emp: 0, qual: 30, cust: 0, rep: 15, rev: 0, exp: 600 },
+                restaurant: { name: 'Restaurant', cash: 20000, emp: 0, qual: 25, cust: 0, rep: 10, rev: 0, exp: 700 },
+                consulting: { name: 'Consulting', cash: 20000, emp: 0, qual: 35, cust: 0, rep: 20, rev: 0, exp: 400 },
+                ecommerce: { name: 'E-Commerce', cash: 20000, emp: 0, qual: 25, cust: 0, rep: 12, rev: 0, exp: 500 }
+            }
+        };
 
-let balls = [];
-function createRandomBall(){
-  const ang=Math.random()*Math.PI*2;
-  const sp=randRange(BASE_SPEED*0.5,BASE_SPEED*1.5);
-  return new Ball(
-    randRange(BALL_RADIUS*4, canvas.width-BALL_RADIUS*4),
-    randRange(BALL_RADIUS*4, canvas.height-BALL_RADIUS*4),
-    Math.cos(ang)*sp,
-    Math.sin(ang)*sp,
-    BALL_RADIUS,
-    randomColor()
-  );
-}
-function spawnInitialBalls(count){
-  balls = [];
-  trailsDisabled = false;
-  lastCoverageCheckFrame = 0;
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  for(let i=0;i<count;i++) balls.push(createRandomBall());
-}
+        const actionDefs = {
+            ops: [
+                { id: 'hire', label: 'Hire Employee', cost: 2500 },
+                { id: 'fire', label: 'Fire Employee', cost: 800, gain: true },
+                { id: 'train', label: 'Train Staff', cost: 1500 },
+                { id: 'wages', label: 'Raise Wages', cost: 'varies' },
+                { id: 'workplace', label: 'Improve Workplace', cost: 3000 },
+                { id: 'automate', label: 'Automate', cost: 5000 },
+                { id: 'quality', label: 'Quality Control', cost: 2000 },
+                { id: 'cs', label: 'Customer Service', cost: 1800 },
+                { id: 'maintain', label: 'Maintenance', cost: 1000 }
+            ],
+            growth: [
+                { id: 'expand', label: 'New Location', cost: 15000 },
+                { id: 'product', label: 'New Product', cost: 'custom' },
+                { id: 'partner', label: 'Partnership', cost: 4000 },
+                { id: 'franchise', label: 'Franchise', cost: 12000 },
+                { id: 'acquire', label: 'Acquire Competitor', cost: 25000 },
+                { id: 'intl', label: 'Go International', cost: 35000 }
+            ],
+            finance: [
+                { id: 'investor', label: 'Seek Investor', cost: 'equity' },
+                { id: 'cut', label: 'Cut Costs', cost: 'harsh' },
+                { id: 'stocks', label: 'Invest Stocks', cost: 5000 },
+                { id: 'realestate', label: 'Real Estate', cost: 18000 },
+                { id: 'refinance', label: 'Refinance', cost: 3000 },
+                { id: 'payoff', label: 'Pay Off Loan', cost: 'varies' }
+            ],
+            marketing: [
+                { id: 'marketing', label: 'Campaign', cost: 3500 },
+                { id: 'social', label: 'Social Media', cost: 1200 },
+                { id: 'pr', label: 'PR Campaign', cost: 2500 },
+                { id: 'rebrand', label: 'Rebrand', cost: 5000 },
+                { id: 'influencer', label: 'Influencer', cost: 4000 },
+                { id: 'seo', label: 'SEO', cost: 3000 }
+            ],
+            empire: [
+                { id: 'newco', label: 'Start Company', cost: 20000 },
+                { id: 'transfer', label: 'Transfer Funds', cost: 'free' },
+                { id: 'cross', label: 'Cross-Promote', cost: 2000 },
+                { id: 'merge', label: 'Merge', cost: 'free' },
+                { id: 'sell', label: 'Sell Company', cost: 'free' }
+            ]
+        };
 
-function distSq(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return dx*dx+dy*dy; }
+        const hardEvents = {
+            cash_flow: [
+                { title: "Cash Flow Crisis", desc: "Major client payment delayed 60 days. You need to make payroll now.", 
+                  ignoreEffect: { cash: -5000, rep: -20, morale: -30 },
+                  choices: [
+                    { text: "Take emergency loan (-$3000 fees, +$10000)", cost: -7000, effects: { loans: { monthly: 500, months: 24 } } },
+                    { text: "Delay vendor payments (Rep -15, possible lawsuits)", cost: 0, effects: { rep: -15 } }
+                ]},
+            ],
+            competition: [
+                { title: "Market Disruption", desc: "Well-funded competitor launching aggressive campaign. Market share at risk.", 
+                  ignoreEffect: { cust: -50, rep: -10 },
+                  choices: [
+                    { text: "Counter with own campaign (-$8000)", cost: 8000, effects: { rep: 10, cust: 20 } },
+                    { text: "Focus on customer retention (-$3000)", cost: 3000, effects: { qual: 15, morale: 10 } }
+                ]}
+            ],
+            regulatory: [
+                { title: "License Renewal", desc: "Business license renewal with new compliance requirements.", 
+                  ignoreEffect: { exp: 500 },
+                  choices: [
+                    { text: "Full compliance (-$4000)", cost: 4000, effects: { rep: 5 } },
+                    { text: "Minimal compliance (-$1500, risk fines)", cost: 1500, effects: {} }
+                ]}
+            ]
+        };
 
-let pairChecks = 0;
-let actualCollisions = 0;
-function cellKey(cx,cy){ return cx + "," + cy; }
-let grid = new Map();
+        const events = {
+            quality: [
+                { title: "Quality Complaints", desc: "Multiple customers report quality issues. Social media sentiment turning negative.", 
+                  ignoreEffect: { rep: -20, cust: -25 },
+                  choices: [
+                    { text: "Refund program + apology (-$800, Rep +8)", cost: 800, effects: { rep: 8, cust: -3 } },
+                    { text: "Hire QA team (-$4000, Quality +20, +1 emp)", cost: 4000, effects: { qual: 20, emp: 1, exp: 600 } }
+                ]},
+                { title: "Equipment Failure", desc: "Primary production equipment failed during peak season.", 
+                  ignoreEffect: { qual: -15, rev: -1500 },
+                  choices: [
+                    { text: "Emergency repair (-$5000, Quality +8)", cost: 5000, effects: { qual: 8 } },
+                    { text: "Standard repair (-$2000, Quality -5)", cost: 2000, effects: { qual: -5, rev: -800 } },
+                    { text: "Upgrade equipment (-$12000, Quality +30, -$200/mo maintenance)", cost: 12000, effects: { qual: 30, exp: 200 } }
+                ]}
+            ],
+            employee: [
+                { title: "Talent Poaching", desc: "Star employee received competitor offer - 60% higher salary.", 
+                  ignoreEffect: { qual: -15, morale: -8, emp: -1 },
+                  choices: [
+                    { text: "Match offer (Expenses +$1800/mo)", cost: 0, effects: { exp: 1800, morale: 10 } },
+                    { text: "Counter with equity (Expenses +$900/mo)", cost: 0, effects: { exp: 900, morale: 15 } },
+                    { text: "Let go, hire replacement (-$3500, Qual -15)", cost: 3500, effects: { qual: -15, morale: -8 } }
+                ]},
+                { title: "Morale Crisis", desc: "Employee survey reveals widespread dissatisfaction.", 
+                  ignoreEffect: { morale: -15, emp: -1 },
+                  choices: [
+                    { text: "Company retreat (-$4500, Morale +30)", cost: 4500, effects: { morale: 30 } },
+                    { text: "Raise salaries 10% (Expenses +$2000/mo)", cost: 0, effects: { exp: 2000, morale: 25 } }
+                ]}
+            ],
+            customer: [
+                { title: "Enterprise Client", desc: "Fortune 500 company wants exclusivity deal.", 
+                  ignoreEffect: {},
+                  choices: [
+                    { text: "Accept + expand (-$10000, Rev +$3500/mo, +3 emp)", cost: 10000, effects: { rev: 3500, emp: 3, exp: 1800 } },
+                    { text: "Negotiate smaller (-$4000, Rev +$1800/mo)", cost: 4000, effects: { rev: 1800 } }
+                ]},
+                { title: "Viral Publicity", desc: "Influencer praised your business. Orders flooding in.", 
+                  ignoreEffect: { cust: 30, qual: 15 },
+                  choices: [
+                    { text: "Scale up (-$8000, Cust +100, +3 emp)", cost: 8000, effects: { cust: 100, emp: 3, exp: 1800 } },
+                    { text: "Moderate expansion (-$4000, Cust +60)", cost: 4000, effects: { cust: 60 } }
+                ]}
+            ],
+            market: [
+                { title: "Price War", desc: "Well-funded competitor slashed prices by 40%.", 
+                  ignoreEffect: { cust: -40 },
+                  choices: [
+                    { text: "Match prices (Rev -$2000/mo, Cust +25)", cost: 0, effects: { rev: -2000, cust: 25 } },
+                    { text: "Quality focus (-$5000, Qual +30, Rep +20)", cost: 5000, effects: { qual: 30, rep: 20 } }
+                ]},
+                { title: "New Market", desc: "Research reveals underserved segment.", 
+                  ignoreEffect: {},
+                  choices: [
+                    { text: "Full entry (-$15000, Rev +$3500/mo, Cust +80)", cost: 15000, effects: { rev: 3500, cust: 80 } },
+                    { text: "Test pilot (-$6000, Rev +$1500/mo, Cust +35)", cost: 6000, effects: { rev: 1500, cust: 35 } }
+                ]}
+            ]
+        };
 
-function resolveCollision(b1,b2){
-  const dx=b2.x-b1.x, dy=b2.y-b1.y;
-  const dist=Math.hypot(dx,dy)||1;
-  const overlap=(b1.r+b2.r)-dist;
-  if(overlap>0){
-    const nx=dx/dist, ny=dy/dist;
-    const half=overlap/2;
-    b1.x-=nx*half; b1.y-=ny*half;
-    b2.x+=nx*half; b2.y+=ny*half;
-
-    const v1n=b1.vx*nx + b1.vy*ny;
-    const v2n=b2.vx*nx + b2.vy*ny;
-    const v1t=-b1.vx*ny + b1.vy*nx;
-    const v2t=-b2.vx*ny + b2.vy*nx;
-
-    const v1nA=v2n, v2nA=v1n;
-    b1.vx = v1nA*nx - v1t*ny;
-    b1.vy = v1nA*ny + v1t*nx;
-    b2.vx = v2nA*nx - v2t*ny;
-    b2.vy = v2nA*ny + v2t*nx;
-  }
-}
-
-let frame = 0;
-let lastFrameTimestamp = performance.now();
-let dtLastFrame = 16.6;
-
-let fps = 60;
-let fpsFrameCount = 0;
-let fpsLastUpdate = performance.now();
-const FPS_UPDATE_INTERVAL = 500;
-
-let lastBallCount = 0;
-let lastBallUpdate = performance.now();
-let spawnRate = 0;
-
-const graphFPS = [];
-const graphCPU = [];
-const graphRAM = [];
-const graphSPAWN = [];
-const MAX_GRAPH_POINTS = 100;
-
-function pushGraph(buffer, value){
-  buffer.push(value);
-  if(buffer.length>MAX_GRAPH_POINTS) buffer.shift();
-}
-function drawGraph(canvasEl, buffer, color){
-  const g = canvasEl.getContext("2d");
-  g.clearRect(0,0,canvasEl.width,canvasEl.height);
-  g.strokeStyle = color;
-  g.beginPath();
-  const step = canvasEl.width / MAX_GRAPH_POINTS;
-  buffer.forEach((v,i)=>{
-    const x = i*step;
-    const y = canvasEl.height - v*canvasEl.height;
-    if(i===0) g.moveTo(x,y); else g.lineTo(x,y);
-  });
-  g.stroke();
-}
-
-function getPerfStats(){
-  const cpu = Math.min(1, Math.max(0, (dtLastFrame-16.6)/16.6));
-  let usedRAM=null, totalRAM=null;
-  if(performance.memory){
-    usedRAM = performance.memory.usedJSHeapSize/(1024*1024);
-    totalRAM = performance.memory.totalJSHeapSize/(1024*1024);
-  }
-  const now=performance.now();
-  const dtBalls=(now-lastBallUpdate)/1000;
-  if(dtBalls>=1){
-    spawnRate = (balls.length-lastBallCount)/dtBalls;
-    lastBallCount = balls.length;
-    lastBallUpdate = now;
-  }
-  return {cpu, usedRAM, totalRAM};
-}
-
-function saveState() {
-  localStorage.setItem("chainBalls_lastState", JSON.stringify({
-    balls: balls.length,
-    fps: fps,
-    timestamp: Date.now()
-  }));
-}
-setInterval(saveState, 1000);
-
-let devOpen = false;
-document.addEventListener("keydown", e=>{
-  if(e.key==="`" || e.key==="~"){
-    devOpen = !devOpen;
-    document.getElementById("devConsole").style.display = devOpen ? "block" : "none";
-  }
-});
-
-function addLog(msg){
-  const logPanel=document.getElementById("logPanel");
-  const div=document.createElement("div");
-  div.className="logEntry";
-  div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-  logPanel.appendChild(div);
-  while(logPanel.children.length>200) logPanel.removeChild(logPanel.children[0]);
-  logPanel.scrollTop = logPanel.scrollHeight;
-}
-
-// HUD + graphs
-const hudSmall = document.getElementById("hudSmall");
-const hudText = document.getElementById("hudText");
-const graphCanvasFPS = document.getElementById("graphFPS");
-const graphCanvasCPU = document.getElementById("graphCPU");
-const graphCanvasRAM = document.getElementById("graphRAM");
-const graphCanvasSPAWN = document.getElementById("graphSPAWN");
-[graphCanvasFPS,graphCanvasCPU,graphCanvasRAM,graphCanvasSPAWN].forEach(g=>{
-  g.width = 120;
-  g.height = 35;
-});
-
-// dev controls elements
-const timeScaleLabel = document.getElementById("timeScaleLabel");
-document.querySelectorAll(".speedBtn").forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    const s = parseFloat(btn.getAttribute("data-speed"));
-    timeScale = s;
-    isPaused = false;
-    lastNonZeroScale = s;
-    timeScaleLabel.textContent = s.toFixed(2).replace(/\.00$/,"") + "x";
-    addLog("Time scale set to " + s + "x");
-  });
-});
-
-// pause button
-document.getElementById("btnPause").addEventListener("click", ()=>{
-  if (!isPaused) {
-    if (timeScale > 0) lastNonZeroScale = timeScale;
-    timeScale = 0;
-    isPaused = true;
-    timeScaleLabel.textContent = "Paused";
-    addLog("Simulation paused");
-  } else {
-    timeScale = lastNonZeroScale || 1;
-    isPaused = false;
-    timeScaleLabel.textContent = timeScale.toFixed(2).replace(/\.00$/,"") + "x";
-    addLog("Simulation resumed at " + timeScale + "x");
-  }
-});
-
-document.getElementById("btnRestart").addEventListener("click", ()=>{
-  spawnInitialBalls(INITIAL_BALLS);
-  unlockedAchievements.clear();
-  simStartTime = Date.now();
-  addLog("Run restarted with " + INITIAL_BALLS + " balls.");
-});
-
-// helper: keep random subset of balls
-function keepRandomFraction(fraction){
-  const old = balls.length;
-  if (old === 0) return;
-  let keep = Math.floor(old * fraction);
-  if (keep < 1 && old > 0) keep = 1;
-
-  for (let i = 0; i < keep; i++) {
-    const j = i + Math.floor(Math.random() * (old - i));
-    const tmp = balls[i];
-    balls[i] = balls[j];
-    balls[j] = tmp;
-  }
-  balls.length = keep;
-
-  trailsDisabled = false;
-  lastCoverageCheckFrame = frame;
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  addLog(`Despawned ${(100 - fraction*100).toFixed(0)}% of balls: ${old} → ${balls.length}`);
-}
-
-document.getElementById("btnHalf").addEventListener("click", ()=>{
-  keepRandomFraction(0.5);
-});
-
-document.getElementById("btnNuke").addEventListener("click", ()=>{
-  keepRandomFraction(0.1);
-});
-
-// add-balls helper + buttons
-function addBalls(count){
-  for(let i=0;i<count;i++){
-    balls.push(createRandomBall());
-  }
-  addLog("Added " + count + " ball" + (count===1 ? "" : "s") +
-         " (total: " + balls.length + ")");
-}
-document.getElementById("btnAdd1").addEventListener("click", ()=>addBalls(1));
-document.getElementById("btnAdd5").addEventListener("click", ()=>addBalls(5));
-document.getElementById("btnAdd10").addEventListener("click", ()=>addBalls(10));
-
-// achievement check
-function checkAchievements(){
-  if (simStartTime == null) return;
-  const now = Date.now();
-  for (const th of ACHIEVEMENT_THRESHOLDS) {
-    if (!unlockedAchievements.has(th) && balls.length >= th) {
-      unlockedAchievements.add(th);
-      const elapsed = formatElapsed(now - simStartTime);
-      addLog(`${elapsed} after start - ${th.toLocaleString()} balls reached`);
-    }
-  }
-}
-
-function animate(timestamp){
-  frame++;
-
-  dtLastFrame = timestamp - lastFrameTimestamp;
-  if(dtLastFrame <= 0) dtLastFrame = 0.0001;
-  lastFrameTimestamp = timestamp;
-
-  fpsFrameCount++;
-  const elapsedForFps = timestamp - fpsLastUpdate;
-  if (elapsedForFps >= FPS_UPDATE_INTERVAL) {
-    fps = (fpsFrameCount * 1000) / elapsedForFps;
-    fpsFrameCount = 0;
-    fpsLastUpdate = timestamp;
-  }
-
-  requestAnimationFrame(animate);
-
-  if (!trailsDisabled) {
-    ctx.fillStyle = `rgba(2,6,23,${TRAIL_FADE})`;
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-  }
-
-  pairChecks = 0;
-  actualCollisions = 0;
-
-  if (!isPaused) {
-    // physics + collisions + spawning only when not paused
-    for(const b of balls) b.update();
-
-    grid.clear();
-    for(const b of balls){
-      const cx = (b.x / CELL_SIZE) | 0;
-      const cy = (b.y / CELL_SIZE) | 0;
-      const key = cellKey(cx,cy);
-      let cell = grid.get(key);
-      if(!cell){
-        cell = { cx, cy, balls: [] };
-        grid.set(key, cell);
-      }
-      cell.balls.push(b);
-    }
-
-    const rr = (BALL_RADIUS*2)**2;
-    const neighborOffsets = [
-      [0,0],
-      [1,0],
-      [0,1],
-      [1,1],
-      [-1,1]
-    ];
-
-    const newBalls = [];
-    function processPair(b1,b2){
-      if (b1 === b2) return;
-      pairChecks++;
-      if(distSq(b1,b2)<=rr){
-        actualCollisions++;
-        resolveCollision(b1,b2);
-        if(frame>b1.lastSpawnFrame+SPAWN_COOLDOWN_FRAMES &&
-           frame>b2.lastSpawnFrame+SPAWN_COOLDOWN_FRAMES){
-          const dx=b2.x-b1.x, dy=b2.y-b1.y;
-          const dist=Math.hypot(dx,dy)||1;
-          const nx=dx/dist, ny=dy/dist;
-          const spawnDist=BALL_RADIUS*1.3;
-          const mx=b1.x+nx*spawnDist;
-          const my=b1.y+ny*spawnDist;
-          const angle=Math.random()*Math.PI*2;
-          const speed=randRange(BASE_SPEED*2,BASE_SPEED*4);
-          newBalls.push(new Ball(
-            mx,my,
-            Math.cos(angle)*speed,
-            Math.sin(angle)*speed,
-            BALL_RADIUS,
-            randomColor()
-          ));
-          b1.lastSpawnFrame = frame;
-          b2.lastSpawnFrame = frame;
+        function changeColors(bgColor, uiColor) {
+            const root = document.documentElement;
+            root.style.setProperty('--bg-color', bgColor);
+            root.style.setProperty('--ui-color', uiColor);
+            
+            const hoverColor = calculateHoverColor(bgColor, uiColor);
+            root.style.setProperty('--ui-hover', hoverColor);
+            
+            // Update color pickers to match preset
+            document.getElementById('bgColorPicker').value = bgColor;
+            document.getElementById('uiColorPicker').value = uiColor;
+            document.getElementById('bgColorValue').textContent = bgColor;
+            document.getElementById('uiColorValue').textContent = uiColor;
+            
+            // Update radio button selection
+            if (event && event.currentTarget) {
+                event.currentTarget.querySelector('input[type="radio"]').checked = true;
+            }
         }
-      }
-    }
 
-    for(const cell of grid.values()){
-      const {cx, cy, balls: cellBalls} = cell;
-
-      for(let i=0;i<cellBalls.length;i++){
-        for(let j=i+1;j<cellBalls.length;j++){
-          processPair(cellBalls[i], cellBalls[j]);
+        function applyCustomColors() {
+            const bgColor = document.getElementById('bgColorPicker').value;
+            const uiColor = document.getElementById('uiColorPicker').value;
+            
+            const root = document.documentElement;
+            root.style.setProperty('--bg-color', bgColor);
+            root.style.setProperty('--ui-color', uiColor);
+            
+            const hoverColor = calculateHoverColor(bgColor, uiColor);
+            root.style.setProperty('--ui-hover', hoverColor);
+            
+            // Update display values
+            document.getElementById('bgColorValue').textContent = bgColor;
+            document.getElementById('uiColorValue').textContent = uiColor;
+            
+            // Uncheck all preset radio buttons
+            document.querySelectorAll('input[name="colorScheme"]').forEach(radio => {
+                radio.checked = false;
+            });
         }
-      }
 
-      for(const [ox,oy] of neighborOffsets){
-        if(ox===0 && oy===0) continue;
-        const nk = cellKey(cx+ox, cy+oy);
-        const other = grid.get(nk);
-        if(!other) continue;
-        const otherBalls = other.balls;
-        for(const b1 of cellBalls){
-          for(const b2 of otherBalls){
-            processPair(b1,b2);
-          }
+        // Update color value displays when color pickers change
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('bgColorPicker').addEventListener('input', function() {
+                document.getElementById('bgColorValue').textContent = this.value;
+            });
+            
+            document.getElementById('uiColorPicker').addEventListener('input', function() {
+                document.getElementById('uiColorValue').textContent = this.value;
+            });
+        });
+
+        function calculateHoverColor(bgColor, uiColor) {
+            if (bgColor === '#000' || bgColor === '#000000') {
+                return uiColor.replace(/[0-9a-f]{2}/gi, match => {
+                    const val = parseInt(match, 16);
+                    return ('0' + Math.floor(val * 0.2).toString(16)).slice(-2);
+                });
+            } else if (bgColor === '#ffffff' || bgColor === '#fff') {
+                return '#f0f0f0';
+            } else {
+                return bgColor.replace(/[0-9a-f]{2}/gi, match => {
+                    const val = parseInt(match, 16);
+                    return ('0' + Math.min(255, Math.floor(val * 1.3)).toString(16)).slice(-2);
+                });
+            }
         }
-      }
-    }
 
-    balls.push(...newBalls);
+        function toggleSettings() {
+            document.getElementById('settingsPanel').classList.toggle('hidden');
+        }
 
-    // coverage → kill trails
-    if (!trailsDisabled && frame - lastCoverageCheckFrame >= 15 && canvasArea > 0) {
-      lastCoverageCheckFrame = frame;
-      const coverage = (balls.length * CIRCLE_AREA) / canvasArea;
-      if (coverage >= TRAIL_COVERAGE_THRESHOLD) {
-        trailsDisabled = true;
-        addLog("Trails disabled: coverage ≈ " + (coverage*100).toFixed(1) + "%");
-      }
-    }
+        function restartGame() {
+            if (confirm('Are you sure you want to restart? All progress will be lost.')) {
+                resetGame();
+                toggleSettings();
+            }
+        }
 
-    // live high score
-    if (balls.length > highScore.maxBalls) {
-      highScore.maxBalls = balls.length;
-      highScore.fps = fps;
-      highScore.timestamp = new Date().toLocaleString();
-      localStorage.setItem("chainBalls_highScore", JSON.stringify(highScore));
-    }
+        function selectDifficulty(diff) {
+            document.querySelectorAll('.difficulty-option').forEach(el => el.classList.remove('selected'));
+            event.target.closest('.difficulty-option').classList.add('selected');
+            selectedDifficulty = diff;
+            isHardMode = (diff === 'hard');
+            
+            updateBusinessStats();
+            
+            document.getElementById('difficultyScreen').classList.add('hidden');
+            document.getElementById('setupScreen').classList.remove('hidden');
+        }
 
-    // achievements (only progress when actually simulating)
-    checkAchievements();
-  }
+        function updateBusinessStats() {
+            const mode = isHardMode ? 'hard' : 'easy';
+            Object.keys(bizTypes[mode]).forEach(type => {
+                const stats = bizTypes[mode][type];
+                const el = document.getElementById(`${type}-stats`);
+                if (el) {
+                    el.textContent = `Start: $${(stats.cash/1000).toFixed(0)}K | 0 employees | Quality: ${stats.qual}${isHardMode ? ' | NO INITIAL REVENUE' : ''}`;
+                }
+            });
+        }
 
-  // draw always (so the frozen scene still shows while paused)
-  for(const b of balls) b.draw();
+        function selectBusiness(type) {
+            document.querySelectorAll('.business-type').forEach(el => el.classList.remove('selected'));
+            event.target.closest('.business-type').classList.add('selected');
+            selectedBiz = type;
+        }
 
-  const stats = getPerfStats();
-  const stress = Math.min(1000,
-    balls.length*0.15 +
-    pairChecks*0.0000001 +
-    (1-Math.min(fps,60)/60)*200
-  );
+        function createCo(type, name, first = false) {
+            const mode = isHardMode ? 'hard' : 'easy';
+            const t = bizTypes[mode][type];
+            return {
+                id: nextId++, name, type, cash: first ? t.cash : 0, month: 1, emp: t.emp, rep: t.rep,
+                cust: t.cust, qual: t.qual, morale: 60, rev: t.rev, exp: t.exp, revBoost: 0,
+                loans: [], total: { rev: 0, exp: 0 }, used: [], victory: false, prevRev: 0, prevExp: 0
+            };
+        }
 
-  const timeLabel = isPaused
-    ? "Paused"
-    : timeScale.toFixed(2) + "x";
+        function getSpeed() {
+            return gameSpeed[document.getElementById('speedSelect').value];
+        }
 
-  hudText.innerHTML = `
-    Balls: ${balls.length}<br>
-    FPS: ${fps.toFixed(1)}<br>
-    Frame: ${dtLastFrame.toFixed(2)} ms<br>
-    CPU: ${(stats.cpu*100).toFixed(1)}%<br>
-    Pair Checks: ${formatBig(pairChecks)}<br>
-    Collisions: ${formatBig(actualCollisions)}<br>
-    Spawn Rate: ${spawnRate.toFixed(1)}/s<br>
-    Time Scale: ${timeLabel}<br>
-    Trails: ${trailsDisabled ? "OFF" : "ON"}<br>
-    RAM: ${
-      stats.usedRAM ? stats.usedRAM.toFixed(1)+" / "+stats.totalRAM.toFixed(1)+" MB" : "N/A"
-    }<br>
-    Stress: ${stress.toFixed(0)}
-  `;
+        function startGame() {
+            const name = document.getElementById('companyName').value || 'TechCorp';
+            if (!selectedBiz) return alert('Select business type');
+            if (!selectedDifficulty) return alert('Select difficulty first');
+            companies = [createCo(selectedBiz, name, true)];
+            activeIdx = 0;
+            document.getElementById('setupScreen').classList.add('hidden');
+            document.getElementById('gameScreen').classList.remove('hidden');
+            updateSelector();
+            renderActionButtons();
+            updateDisplay();
+            showReport();
+        }
 
-  pushGraph(graphFPS, Math.min(1, fps/60));
-  pushGraph(graphCPU, stats.cpu);
-  pushGraph(graphRAM, stats.usedRAM ? Math.min(1,stats.usedRAM/stats.totalRAM) : 0);
-  pushGraph(graphSPAWN, Math.min(1, spawnRate/200));
+        function renderActionButtons() {
+            Object.keys(actionDefs).forEach(tab => {
+                const container = document.getElementById(tab + 'Tab');
+                container.innerHTML = '';
+                actionDefs[tab].forEach(action => {
+                    const btn = document.createElement('button');
+                    btn.className = 'action-button';
+                    let costText = action.cost === 'custom' ? 'CUSTOM' : 
+                                   typeof action.cost === 'number' 
+                        ? (action.gain ? `+$${action.cost.toLocaleString()}` : `-$${action.cost.toLocaleString()}`)
+                        : action.cost;
+                    btn.innerHTML = `${action.label}<br>${costText}`;
+                    btn.onclick = () => act(action.id);
+                    container.appendChild(btn);
+                });
+            });
+        }
 
-  drawGraph(graphCanvasFPS, graphFPS, "#00eaff");
-  drawGraph(graphCanvasCPU, graphCPU, "#ff66cc");
-  drawGraph(graphCanvasRAM, graphRAM, "#66ff99");
-  drawGraph(graphCanvasSPAWN, graphSPAWN, "#ffaa44");
+        function updateSelector() {
+            const sel = document.getElementById('companySelector');
+            sel.innerHTML = '';
+            companies.forEach((co, i) => {
+                const net = calcRev(co) - calcExp(co);
+                const tab = document.createElement('div');
+                tab.className = 'company-tab' + (i === activeIdx ? ' active' : '');
+                tab.innerHTML = `${co.name}<br>$${co.cash.toLocaleString()}<br>${net >= 0 ? '+' : ''}$${net.toLocaleString()}/mo`;
+                tab.onclick = () => switchCo(i);
+                sel.appendChild(tab);
+            });
+            const newTab = document.createElement('div');
+            newTab.className = 'company-tab';
+            newTab.style.borderStyle = 'dashed';
+            newTab.innerHTML = '+ NEW<br>COMPANY';
+            newTab.onclick = () => act('newco');
+            sel.appendChild(newTab);
+            updatePortfolio();
+        }
 
-  if(devOpen){
-    document.getElementById("perfDetails").innerHTML = `
-      FPS (avg ${FPS_UPDATE_INTERVAL}ms): ${fps.toFixed(1)}<br>
-      Frame Time (last): ${dtLastFrame.toFixed(2)} ms<br>
-      CPU Load (est): ${(stats.cpu*100).toFixed(1)}%<br>
-      RAM Used: ${
-        stats.usedRAM ? stats.usedRAM.toFixed(2)+" MB" : "N/A"
-      }<br>
-      RAM Total: ${
-        stats.totalRAM ? stats.totalRAM.toFixed(1)+" MB" : "N/A"
-      }<br>
-      Balls: ${balls.length}<br>
-      Pair Checks (last frame): ${formatBig(pairChecks)}<br>
-      Collisions (last frame): ${formatBig(actualCollisions)}<br>
-      Spawns/sec: ${spawnRate.toFixed(1)}<br>
-      Time Scale: ${timeLabel}<br>
-      Trails: ${trailsDisabled ? "OFF" : "ON"}
-    `;
-    document.getElementById("stressPanel").innerHTML =
-      `Stress Score: <b>${stress.toFixed(0)}</b>`;
-  }
+        function updatePortfolio() {
+            if (companies.length > 1) {
+                const cash = companies.reduce((s, c) => s + c.cash, 0);
+                const rev = companies.reduce((s, c) => s + calcRev(c), 0);
+                const emp = companies.reduce((s, c) => s + c.emp, 0);
+                document.getElementById('portfolioContent').textContent = 
+                    `Companies: ${companies.length}\n` +
+                    `Total Cash: $${cash.toLocaleString()}\n` +
+                    `Combined Revenue: $${rev.toLocaleString()}/mo\n` +
+                    `Total Employees: ${emp}`;
+                document.getElementById('portfolioSummary').classList.remove('hidden');
+            } else {
+                document.getElementById('portfolioSummary').classList.add('hidden');
+            }
+        }
 
-  document.getElementById("highscorePanel").innerHTML =
-    `High Score: <b>${highScore.maxBalls}</b><br>
-     FPS at Peak: <b>${highScore.fps.toFixed(1)}</b><br>
-     When: ${highScore.timestamp || "—"}`;
-}
+        function switchCo(i) { activeIdx = i; updateSelector(); updateDisplay(); }
+        function getCo() { return companies[activeIdx]; }
 
-const overlay = document.getElementById("overlay");
-document.getElementById("startBtn").onclick = ()=>{
-  INITIAL_BALLS = Math.max(1, Math.min(2000,
-    Number(document.getElementById("ballCount").value)
-  ));
-  spawnInitialBalls(INITIAL_BALLS);
-  unlockedAchievements.clear();
-  simStartTime = Date.now();
-  hudSmall.style.display = "block";
-  document.getElementById("uiPanel").style.display = "none";
-  overlay.style.display = "none";
-  addLog("Simulation started with "+INITIAL_BALLS+" balls.");
-};
+        function calcRev(co) {
+            const speed = getSpeed();
+            const hardModePenalty = isHardMode ? 0.8 : 1;
+            let r = co.rev + co.emp * 400 / (1 + co.emp * 0.015) + co.cust * 12 / (1 + co.cust * 0.0008) + co.revBoost;
+            r *= (co.qual / 100 + 0.6) * (co.rep / 100 + 0.6) * (co.morale / 100 * 0.25 + 0.85);
+            return Math.max(0, Math.floor(r * (0.9 + Math.random() * 0.2) * speed * hardModePenalty));
+        }
 
-requestAnimationFrame(animate);
-</script>
+        function calcExp(co) {
+            const speed = getSpeed();
+            const hardModePenalty = isHardMode ? 1.2 : 1;
+            let e = co.exp + co.emp * 450 * (1 + co.emp * 0.008);
+            co.loans.forEach(l => e += l.monthly);
+            return Math.max(0, Math.floor(e * (co.morale < 40 ? 1.12 : 1) * speed * hardModePenalty));
+        }
+
+        function calcDebt(co) {
+            const total = co.loans.reduce((s, l) => s + l.monthly, 0);
+            return Math.floor((total / Math.max(calcRev(co), 1)) * 100);
+        }
+
+        function updateDisplay() {
+            const co = getCo();
+            document.getElementById('cash').textContent = co.cash.toLocaleString();
+            document.getElementById('month').textContent = co.month;
+            document.getElementById('employees').textContent = co.emp;
+            document.getElementById('reputation').textContent = Math.max(0, Math.min(100, co.rep));
+            document.getElementById('customers').textContent = co.cust;
+            document.getElementById('quality').textContent = Math.max(0, Math.min(100, co.qual));
+            document.getElementById('morale').textContent = Math.max(0, Math.min(100, co.morale));
+            document.getElementById('revenue').textContent = calcRev(co).toLocaleString();
+            document.getElementById('expenses').textContent = calcExp(co).toLocaleString();
+            const debt = calcDebt(co);
+            document.getElementById('debtCapacity').textContent = debt;
+            document.getElementById('currentDebt').textContent = debt;
+            if (debt > 60) {
+                document.getElementById('debtWarning').textContent = `WARNING: HIGH DEBT ${debt}%`;
+                document.getElementById('debtWarning').classList.remove('hidden');
+            } else {
+                document.getElementById('debtWarning').classList.add('hidden');
+            }
+        }
+
+        function hideAll() {
+            ['monthlyReportScreen', 'eventScreen', 'freeActionScreen', 'victoryScreen', 'gameOverScreen'].forEach(id =>
+                document.getElementById(id).classList.add('hidden')
+            );
+        }
+
+        function showReport() {
+            hideAll();
+            const co = getCo();
+            const rev = calcRev(co), exp = calcExp(co), net = rev - exp;
+            
+            co.prevRev = rev;
+            co.prevExp = exp;
+            co.cash += net;
+            co.total.rev += rev;
+            co.total.exp += exp;
+            
+            co.loans = co.loans.filter(l => { l.months--; if (l.months <= 0) co.exp -= l.monthly; return l.months > 0; });
+            
+            const speed = getSpeed();
+            const decayMultiplier = isHardMode ? 1.5 : 1;
+            co.qual = Math.max(0, co.qual - (2 * speed * decayMultiplier));
+            co.morale = Math.max(0, co.morale - (1.5 * speed * decayMultiplier));
+            const retentionRate = isHardMode ? 0.96 : 0.98;
+            co.cust = Math.max(0, Math.floor(co.cust * (retentionRate - (speed - 1) * 0.01)));
+            co.revBoost = Math.floor(co.revBoost * 0.7);
+            
+            if (co.qual > 70) co.rep = Math.min(100, co.rep + 1);
+            
+            document.getElementById('reportMonth').textContent = co.month;
+            document.getElementById('reportContent').textContent = 
+                `${co.name}\n\n` +
+                `Revenue: +$${rev.toLocaleString()}\n` +
+                `Expenses: -$${exp.toLocaleString()}\n` +
+                `Net Income: ${net >= 0 ? '+' : ''}$${net.toLocaleString()}\n\n` +
+                `Cash Balance: $${co.cash.toLocaleString()}\n` +
+                (co.loans.length > 0 ? `Active Loans: ${co.loans.length} (${calcDebt(co)}% debt)\n` : '') +
+                `\nQuality -${(2 * speed * decayMultiplier).toFixed(1)}\n` +
+                `Morale -${(1.5 * speed * decayMultiplier).toFixed(1)}\n` +
+                `Customer retention: ${(retentionRate * 100).toFixed(0)}%`;
+            
+            document.getElementById('monthlyReportScreen').classList.remove('hidden');
+            updateDisplay();
+            updateSelector();
+            
+            if (co.cash >= 150000 && co.rep >= 75 && !co.victory) {
+                co.victory = true;
+                showVictory();
+            } else if (co.cash < -20000) showGameOver();
+        }
+
+        function showEvent() {
+            hideAll();
+            
+            let allEvents = {...events};
+            if (isHardMode && Math.random() < 0.4) {
+                allEvents = {...allEvents, ...hardEvents};
+            }
+            
+            const cats = Object.keys(allEvents);
+            const cat = cats[Math.floor(Math.random() * cats.length)];
+            const evts = allEvents[cat];
+            const evt = evts[Math.floor(Math.random() * evts.length)];
+            
+            currentEventChoices = evt.choices;
+            
+            document.getElementById('eventTitle').textContent = evt.title;
+            document.getElementById('eventDescription').textContent = evt.desc;
+            
+            const co = getCo();
+            const hasUnaffordableOptions = evt.choices.some(choice => choice.cost > co.cash);
+            
+            if (hasUnaffordableOptions) {
+                document.getElementById('eventLoanOptions').classList.remove('hidden');
+            } else {
+                document.getElementById('eventLoanOptions').classList.add('hidden');
+            }
+            
+            const container = document.getElementById('eventChoices');
+            container.innerHTML = '';
+            evt.choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-button';
+                btn.onclick = () => handleChoice(choice);
+                btn.disabled = getCo().cash < choice.cost;
+                btn.textContent = choice.text + (getCo().cash < choice.cost && choice.cost > 0 ? 
+                    ` [Need $${choice.cost.toLocaleString()}]` : '');
+                container.appendChild(btn);
+            });
+            
+            const ignoreBtn = document.createElement('button');
+            ignoreBtn.className = 'choice-button ignore';
+            ignoreBtn.onclick = () => handleIgnore(evt.ignoreEffect);
+            ignoreBtn.textContent = 'IGNORE SITUATION (Suffer consequences)';
+            container.appendChild(ignoreBtn);
+            
+            document.getElementById('eventScreen').classList.remove('hidden');
+        }
+
+        function quickLoanFromEvent(amt, mo, mos) {
+            quickLoan(amt, mo, mos);
+            const container = document.getElementById('eventChoices');
+            const lastChild = container.lastChild;
+            container.innerHTML = '';
+            currentEventChoices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-button';
+                btn.onclick = () => handleChoice(choice);
+                btn.disabled = getCo().cash < choice.cost;
+                btn.textContent = choice.text + (getCo().cash < choice.cost && choice.cost > 0 ? 
+                    ` [Need $${choice.cost.toLocaleString()}]` : '');
+                container.appendChild(btn);
+            });
+            container.appendChild(lastChild);
+        }
+
+        function handleIgnore(effects) {
+            hideAll();
+            const co = getCo();
+            
+            let txt = `DECISION: Ignored the situation\n\nCONSEQUENCES:\n`;
+            
+            if (effects.cash) { co.cash += effects.cash; txt += `Cash: ${effects.cash > 0 ? '+' : ''}$${effects.cash.toLocaleString()}\n`; }
+            if (effects.rep) { co.rep += effects.rep; txt += `Reputation: ${effects.rep > 0 ? '+' : ''}${effects.rep}\n`; }
+            if (effects.cust) { co.cust += effects.cust; txt += `Customers: ${effects.cust > 0 ? '+' : ''}${effects.cust}\n`; }
+            if (effects.qual) { co.qual += effects.qual; txt += `Quality: ${effects.qual > 0 ? '+' : ''}${effects.qual}\n`; }
+            if (effects.morale) { co.morale += effects.morale; txt += `Morale: ${effects.morale > 0 ? '+' : ''}${effects.morale}\n`; }
+            if (effects.emp) { co.emp += effects.emp; txt += `Employees: ${effects.emp > 0 ? '+' : ''}${effects.emp}\n`; }
+            if (effects.rev) { co.rev += effects.rev; txt += `Base Revenue: ${effects.rev > 0 ? '+' : ''}$${Math.abs(effects.rev)}/mo\n`; }
+            if (effects.exp) { co.exp += effects.exp; txt += `Base Expenses: ${effects.exp > 0 ? '+' : ''}$${Math.abs(effects.exp)}/mo\n`; }
+            
+            if (!effects.cash && !effects.rep && !effects.cust && !effects.qual && !effects.morale && !effects.emp && !effects.rev && !effects.exp) {
+                txt += 'No immediate consequences.\n';
+            }
+            
+            txt += '\nTake additional actions before next month.';
+            
+            co.rep = Math.max(0, Math.min(100, co.rep));
+            co.qual = Math.max(0, Math.min(100, co.qual));
+            co.morale = Math.max(0, Math.min(100, co.morale));
+            co.cust = Math.max(0, co.cust);
+            co.emp = Math.max(0, co.emp);
+            
+            document.getElementById('eventResult').innerHTML = '<pre>' + txt + '</pre>';
+            actions = [];
+            document.getElementById('logContent').textContent = 'No actions taken this month.';
+            document.getElementById('freeActionScreen').classList.remove('hidden');
+            updateDisplay();
+            updateSelector();
+        }
+
+        function handleChoice(choice) {
+            hideAll();
+            const co = getCo();
+            co.cash -= choice.cost;
+            
+            let txt = `DECISION: ${choice.text}\n\nEFFECTS:\n`;
+            if (choice.cost !== 0) txt += `Cash: ${choice.cost > 0 ? '-' : '+'}$${Math.abs(choice.cost).toLocaleString()}\n`;
+            
+            const e = choice.effects;
+            if (e.rep) { co.rep += e.rep; txt += `Reputation: ${e.rep > 0 ? '+' : ''}${e.rep}\n`; }
+            if (e.cust) { co.cust += e.cust; txt += `Customers: ${e.cust > 0 ? '+' : ''}${e.cust}\n`; }
+            if (e.qual) { co.qual += e.qual; txt += `Quality: ${e.qual > 0 ? '+' : ''}${e.qual}\n`; }
+            if (e.morale) { co.morale += e.morale; txt += `Morale: ${e.morale > 0 ? '+' : ''}${e.morale}\n`; }
+            if (e.emp) { co.emp += e.emp; txt += `Employees: ${e.emp > 0 ? '+' : ''}${e.emp}\n`; }
+            if (e.rev) { co.rev += e.rev; txt += `Base Revenue: ${e.rev > 0 ? '+' : ''}$${Math.abs(e.rev)}/mo\n`; }
+            if (e.exp) { co.exp += e.exp; txt += `Base Expenses: ${e.exp > 0 ? '+' : ''}$${Math.abs(e.exp)}/mo\n`; }
+            if (e.loans) {
+                co.loans.push(e.loans);
+                co.exp += e.loans.monthly;
+                txt += `New Loan: -$${e.loans.monthly}/mo for ${e.loans.months} months\n`;
+            }
+            
+            txt += '\nTake additional actions before next month.';
+            
+            co.rep = Math.max(0, Math.min(100, co.rep));
+            co.qual = Math.max(0, Math.min(100, co.qual));
+            co.morale = Math.max(0, Math.min(100, co.morale));
+            co.cust = Math.max(0, co.cust);
+            co.emp = Math.max(0, co.emp);
+            
+            document.getElementById('eventResult').innerHTML = '<pre>' + txt + '</pre>';
+            actions = [];
+            document.getElementById('logContent').textContent = 'No actions taken this month.';
+            document.getElementById('freeActionScreen').classList.remove('hidden');
+            updateDisplay();
+            updateSelector();
+        }
+
+        function log(msg) {
+            actions.push(msg);
+            document.getElementById('logContent').innerHTML = actions.join('<br>');
+        }
+
+        function showTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            ['opsTab', 'growthTab', 'financeTab', 'marketingTab', 'empireTab'].forEach(id =>
+                document.getElementById(id).classList.add('hidden')
+            );
+            document.getElementById(tab + 'Tab').classList.remove('hidden');
+        }
+
+        function quickLoan(amt, mo, mos) {
+            const co = getCo(), debt = calcDebt(co);
+            let max = 20;
+            if (amt >= 10000) max = 30;
+            if (amt >= 30000) max = 50;
+            if (amt >= 75000) max = 65;
+            if (debt >= max) return log(`X Debt too high (${debt}%)`);
+            if (amt >= 30000 && co.rep < 50) return log('X Reputation too low (need 50+)');
+            if (amt >= 75000 && co.rep < 70) return log('X Reputation too low (need 70+)');
+            co.cash += amt;
+            co.loans.push({ monthly: mo, months: mos });
+            co.exp += mo;
+            log(`+ Loan: +$${amt.toLocaleString()} (-$${mo}/mo x${mos})`);
+            updateDisplay();
+            updateSelector();
+        }
+
+        function openTransferModal() {
+            if (companies.length < 2) return log('X Need 2+ companies');
+            const co = getCo();
+            document.getElementById('fromCompanyName').textContent = co.name;
+            document.getElementById('availableCash').textContent = co.cash.toLocaleString();
+            
+            const select = document.getElementById('targetCompany');
+            select.innerHTML = companies
+                .map((c, i) => i !== activeIdx ? `<option value="${i}">${c.name} ($${c.cash.toLocaleString()})</option>` : '')
+                .filter(Boolean)
+                .join('');
+            
+            document.getElementById('transferModal').classList.remove('hidden');
+        }
+
+        function closeTransferModal() {
+            document.getElementById('transferModal').classList.add('hidden');
+        }
+
+        function confirmTransfer() {
+            const co = getCo();
+            const amt = parseInt(document.getElementById('transferAmount').value);
+            const targetIdx = parseInt(document.getElementById('targetCompany').value);
+            
+            if (!amt || amt <= 0) return alert('Enter valid amount');
+            if (co.cash < amt) return alert('Insufficient funds');
+            
+            co.cash -= amt;
+            companies[targetIdx].cash += amt;
+            log(`+ Transfer: $${amt.toLocaleString()} to ${companies[targetIdx].name}`);
+            closeTransferModal();
+            updateDisplay();
+            updateSelector();
+        }
+
+        function openProductModal() {
+            document.getElementById('productName').value = '';
+            document.getElementById('productType').value = '';
+            document.getElementById('marketingStrategy').value = '';
+            document.getElementById('targetMarket').value = '';
+            document.getElementById('devBudget').value = '';
+            updateProductCost();
+            document.getElementById('productModal').classList.remove('hidden');
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').classList.add('hidden');
+        }
+
+        function updateProductCost() {
+            let cost = 0;
+            const devBudget = document.getElementById('devBudget').value;
+            const marketing = document.getElementById('marketingStrategy').value;
+            
+            if (devBudget === 'low') cost += 5000;
+            if (devBudget === 'medium') cost += 10000;
+            if (devBudget === 'high') cost += 20000;
+            
+            if (marketing === 'aggressive') cost += 5000;
+            if (marketing === 'moderate') cost += 2500;
+            if (marketing === 'minimal') cost += 500;
+            
+            document.getElementById('productTotalCost').textContent = cost.toLocaleString();
+            
+            const co = getCo();
+            if (cost > 0 && cost > co.cash) {
+                document.getElementById('productLoanOptions').classList.remove('hidden');
+            } else {
+                document.getElementById('productLoanOptions').classList.add('hidden');
+            }
+            
+            if (cost > 0) {
+                const type = document.getElementById('productType').value;
+                let estimate = '';
+                if (type === 'premium') estimate = 'Est: High margins, fewer customers';
+                if (type === 'standard') estimate = 'Est: Balanced approach';
+                if (type === 'budget') estimate = 'Est: Low margins, high volume';
+                document.getElementById('productEstimate').textContent = estimate;
+            }
+        }
+
+        function quickLoanFromModal(amt, mo, mos) {
+            quickLoan(amt, mo, mos);
+            updateProductCost();
+        }
+
+        ['productType', 'marketingStrategy', 'targetMarket', 'devBudget'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', updateProductCost);
+        });
+
+        function confirmProduct() {
+            const co = getCo();
+            const name = document.getElementById('productName').value;
+            const type = document.getElementById('productType').value;
+            const marketing = document.getElementById('marketingStrategy').value;
+            const target = document.getElementById('targetMarket').value;
+            const budget = document.getElementById('devBudget').value;
+            
+            if (!name || !type || !marketing || !target || !budget) {
+                return alert('Please fill all fields');
+            }
+            
+            let cost = 0;
+            if (budget === 'low') cost += 5000;
+            if (budget === 'medium') cost += 10000;
+            if (budget === 'high') cost += 20000;
+            if (marketing === 'aggressive') cost += 5000;
+            if (marketing === 'moderate') cost += 2500;
+            if (marketing === 'minimal') cost += 500;
+            
+            if (co.cash < cost) {
+                return alert(`Need $${cost.toLocaleString()}`);
+            }
+            
+            co.cash -= cost;
+            
+            let revGain = 0, custGain = 0, qualGain = 0;
+            
+            if (budget === 'high') { qualGain += 15; revGain += 800; }
+            if (budget === 'medium') { qualGain += 10; revGain += 500; }
+            if (budget === 'low') { qualGain += 5; revGain += 300; }
+            
+            if (type === 'premium') { revGain += 600; custGain += 20; }
+            if (type === 'standard') { revGain += 400; custGain += 40; }
+            if (type === 'budget') { revGain += 200; custGain += 70; }
+            
+            if (marketing === 'aggressive') { custGain += 50; }
+            if (marketing === 'moderate') { custGain += 30; }
+            if (marketing === 'minimal') { custGain += 15; }
+            
+            co.rev += revGain;
+            co.cust += custGain;
+            co.qual += qualGain;
+            
+            log(`+ Launched "${name}" (${type}) - +$${revGain}/mo, +${custGain} cust, +${qualGain} qual`);
+            closeProductModal();
+            updateDisplay();
+            updateSelector();
+        }
+
+        function act(type) {
+            const co = getCo();
+            
+            if (type === 'product') {
+                openProductModal();
+                return;
+            }
+            
+            const ops = {
+                hire: () => {
+                    if (co.cash < 2500) return log('X Need $2,500');
+                    co.cash -= 2500; co.emp++; co.qual += 3; co.exp += 600;
+                    log('+ Hired employee (+1, Qual +3, +$600/mo)');
+                },
+                fire: () => {
+                    if (co.emp <= 0) return log('X No employees to fire');
+                    co.emp--; co.cash += 800; co.rep -= 8; co.morale -= 15; co.qual -= 5; co.exp -= 600;
+                    log('+ Fired employee (+$800, -$600/mo, Rep -8)');
+                },
+                train: () => {
+                    if (co.emp === 0) return log('X No employees to train');
+                    if (co.cash < 1500) return log('X Need $1,500');
+                    co.cash -= 1500; co.qual += 10; co.morale += 12;
+                    log('+ Training (Qual +10, Morale +12)');
+                },
+                wages: () => {
+                    if (co.emp === 0) return log('X No employees');
+                    const cost = co.emp * 300;
+                    if (co.cash < cost) return log(`X Need $${cost.toLocaleString()}`);
+                    co.cash -= cost; co.exp += co.emp * 30; co.morale += 20; co.rep += 5;
+                    log(`+ Wages raised (Morale +20, +$${co.emp * 30}/mo exp)`);
+                },
+                workplace: () => {
+                    if (co.cash < 3000) return log('X Need $3,000');
+                    co.cash -= 3000; co.morale += 18; co.rep += 8;
+                    log('+ Workplace improved (Morale +18)');
+                },
+                automate: () => {
+                    if (co.cash < 5000) return log('X Need $5,000');
+                    co.cash -= 5000; co.qual += 12; co.exp += 200;
+                    log('+ Automated (Qual +12, +$200/mo maintenance)');
+                },
+                quality: () => {
+                    if (co.cash < 2000) return log('X Need $2,000');
+                    co.cash -= 2000; co.qual += 15; co.revBoost += 400;
+                    log('+ QC (Qual +15, +$400/mo temp)');
+                },
+                cs: () => {
+                    if (co.cash < 1800) return log('X Need $1,800');
+                    co.cash -= 1800;
+                    const gain = Math.floor(25 / (1 + co.cust * 0.004));
+                    co.cust += gain; co.rep += 10;
+                    log(`+ CS (+${gain} cust, Rep +10)`);
+                },
+                maintain: () => {
+                    if (co.cash < 1000) return log('X Need $1,000');
+                    co.cash -= 1000; co.qual += 6;
+                    log('+ Maintenance (Qual +6)');
+                },
+                expand: () => {
+                    if (co.cash < 15000) return log('X Need $15,000');
+                    co.cash -= 15000; co.rev += 1200; co.cust += 80; co.emp += 2; co.exp += 1200;
+                    log('+ New location (+80 cust, +$1200/mo, +2 emp, +$1200/mo exp)');
+                },
+                partner: () => {
+                    if (co.cash < 4000) return log('X Need $4,000');
+                    co.cash -= 4000; co.cust += 50; co.rep += 12; co.revBoost += 800;
+                    log('+ Partnership (+50 cust, +$800/mo temp)');
+                },
+                franchise: () => {
+                    if (co.cash < 12000) return log('X Need $12,000');
+                    co.cash -= 12000; co.rev += 1500; co.cust += 60; co.rep += 15;
+                    log('+ Franchise (+60 cust, +$1500/mo)');
+                },
+                acquire: () => {
+                    if (co.cash < 25000) return log('X Need $25,000');
+                    co.cash -= 25000; co.cust += 75; co.emp += 3; co.rev += 1800; co.exp += 1800;
+                    log('+ Acquisition (+75 cust, +$1800/mo, +3 emp, +$1800/mo exp)');
+                },
+                intl: () => {
+                    if (co.cash < 35000) return log('X Need $35,000');
+                    co.cash -= 35000; co.cust += 120; co.rev += 3000; co.emp += 5; co.rep += 20; co.exp += 3000;
+                    log('+ International (+120 cust, +$3000/mo, +5 emp, +$3000/mo exp)');
+                },
+                investor: () => {
+                    if (co.rep < 40) return log('X Reputation too low');
+                    co.cash += 20000; co.exp += Math.floor(co.rev * 0.08);
+                    log('+ Investor (+$20K, 8% rev share as ongoing expense)');
+                },
+                cut: () => {
+                    if (co.emp <= 1) return log('X Not enough employees');
+                    co.emp -= 2; co.cash += 1500; co.rep -= 15; co.morale -= 25; co.qual -= 10; co.exp -= 1200;
+                    log('+ Emergency cuts (-2 emp, +$1500, -$1200/mo exp)');
+                },
+                stocks: () => {
+                    if (co.cash < 5000) return log('X Need $5,000');
+                    co.cash -= 5000;
+                    const gain = Math.random() > 0.5 ? Math.floor(Math.random() * 3000 + 1000) : -Math.floor(Math.random() * 2000);
+                    co.cash += gain;
+                    log(`+ Stocks ${gain > 0 ? 'gained' : 'lost'} $${Math.abs(gain).toLocaleString()}`);
+                },
+                realestate: () => {
+                    if (co.cash < 18000) return log('X Need $18,000');
+                    co.cash -= 18000; co.rev += 1000;
+                    log('+ Real estate (+$1000/mo passive income)');
+                },
+                refinance: () => {
+                    if (co.loans.length === 0) return log('X No loans');
+                    if (co.cash < 3000) return log('X Need $3,000');
+                    co.cash -= 3000;
+                    co.loans.forEach(l => { const r = Math.floor(l.monthly * 0.25); co.exp -= r; l.monthly -= r; });
+                    log('+ Refinanced (25% payment reduction)');
+                },
+                payoff: () => {
+                    if (co.loans.length === 0) return log('X No loans');
+                    const loan = co.loans[0];
+                    const owed = loan.monthly * loan.months;
+                    if (co.cash < owed) return log(`X Need $${owed.toLocaleString()}`);
+                    co.cash -= owed; co.exp -= loan.monthly; co.loans.shift();
+                    log(`+ Paid off (-$${owed.toLocaleString()}, -$${loan.monthly}/mo)`);
+                },
+                marketing: () => {
+                    if (co.cash < 3500) return log('X Need $3,500');
+                    co.cash -= 3500;
+                    const gain = Math.floor(40 / (1 + co.cust * 0.002));
+                    co.revBoost += 2000; co.cust += gain; co.rep += 10;
+                    log(`+ Campaign (+${gain} cust, +$2000/mo temp)`);
+                },
+                social: () => {
+                    if (co.cash < 1200) return log('X Need $1,200');
+                    co.cash -= 1200; co.cust += 20;
+                    log('+ Social media (+20 cust)');
+                },
+                pr: () => {
+                    if (co.cash < 2500) return log('X Need $2,500');
+                    co.cash -= 2500; co.rep += 18; co.cust += 25;
+                    log('+ PR (Rep +18, +25 cust)');
+                },
+                rebrand: () => {
+                    if (co.cash < 5000) return log('X Need $5,000');
+                    co.cash -= 5000; co.rep += 15; co.cust += 40;
+                    log('+ Rebrand (Rep +15, +40 cust)');
+                },
+                influencer: () => {
+                    if (co.cash < 4000) return log('X Need $4,000');
+                    co.cash -= 4000; co.cust += 55; co.rep += 15;
+                    log('+ Influencer (+55 cust, Rep +15)');
+                },
+                seo: () => {
+                    if (co.cash < 3000) return log('X Need $3,000');
+                    co.cash -= 3000; co.cust += 35; co.rev += 600;
+                    log('+ SEO (+35 cust, +$600/mo)');
+                },
+                newco: () => {
+                    const total = companies.reduce((s, c) => s + c.cash, 0);
+                    if (total < 20000) return log('X Need $20K total');
+                    const name = prompt('Company name:');
+                    if (!name) return;
+                    const types = Object.keys(bizTypes[isHardMode ? 'hard' : 'easy']);
+                    const choice = prompt('Type:\n' + types.map((t, i) => `${i + 1}. ${bizTypes[isHardMode ? 'hard' : 'easy'][t].name}`).join('\n'));
+                    const type = types[parseInt(choice) - 1];
+                    if (!type) return alert('Invalid');
+                    getCo().cash -= 20000;
+                    companies.push(createCo(type, name, false));
+                    activeIdx = companies.length - 1;
+                    updateSelector();
+                    updateDisplay();
+                    log(`+ Started ${name}`);
+                },
+                transfer: () => { openTransferModal(); },
+                cross: () => {
+                    if (companies.length < 2) return log('X Need 2+ companies');
+                    if (co.cash < 2000) return log('X Need $2,000');
+                    co.cash -= 2000;
+                    companies.forEach(c => { c.cust += 12; c.rep += 4; });
+                    log('+ Cross-promo (+12 cust all)');
+                    updateSelector();
+                },
+                merge: () => {
+                    if (companies.length < 2) return log('X Need 2+ companies');
+                    const idx = parseInt(prompt('Merge with:\n' + companies.map((c, i) => 
+                        i !== activeIdx ? `${i + 1}. ${c.name}` : ''
+                    ).filter(Boolean).join('\n'))) - 1;
+                    if (idx < 0 || idx >= companies.length || idx === activeIdx) return;
+                    const target = companies[idx];
+                    co.cash += target.cash; co.emp += target.emp; co.cust += target.cust;
+                    co.rev += target.rev; co.exp += target.exp;
+                    co.qual = Math.floor((co.qual + target.qual) / 2);
+                    companies.splice(idx, 1);
+                    if (idx < activeIdx) activeIdx--;
+                    log(`+ Merged ${target.name}`);
+                    updateSelector();
+                },
+                sell: () => {
+                    if (companies.length <= 1) return log('X Cannot sell only company');
+                    const val = co.cash + (calcRev(co) - calcExp(co)) * 15;
+                    if (confirm(`Sell ${co.name} for $${val.toLocaleString()}?`)) {
+                        companies.splice(activeIdx, 1);
+                        activeIdx = Math.max(0, activeIdx - 1);
+                        companies[activeIdx].cash += val;
+                        updateSelector();
+                        updateDisplay();
+                        log(`+ Sold for $${val.toLocaleString()}`);
+                    }
+                }
+            };
+            if (ops[type]) { ops[type](); updateDisplay(); updateSelector(); }
+        }
+
+        function nextMonth() {
+            hideAll();
+            getCo().month++;
+            showReport();
+        }
+
+        function showVictory() {
+            hideAll();
+            const co = getCo();
+            document.getElementById('victoryContent').textContent = 
+                `${co.name} reached $150,000+ with 75+ reputation!\n\n` +
+                `Difficulty: ${isHardMode ? 'HARD MODE' : 'Easy Mode'}\n` +
+                `Time: ${co.month} months\n` +
+                `Cash: $${co.cash.toLocaleString()}\n` +
+                `Employees: ${co.emp}\n` +
+                `Customers: ${co.cust}\n` +
+                `Reputation: ${co.rep}/100\n\n` +
+                `Continue building your empire!`;
+            document.getElementById('victoryScreen').classList.remove('hidden');
+        }
+
+        function continueAfterVictory() { hideAll(); showReport(); }
+
+        function showGameOver() {
+            hideAll();
+            const co = getCo();
+            document.getElementById('gameOverContent').textContent = 
+                `${co.name} declared bankruptcy.\n\n` +
+                `Difficulty: ${isHardMode ? 'HARD MODE' : 'Easy Mode'}\n` +
+                `Survived: ${co.month} months\n` +
+                `Cash: $${co.cash.toLocaleString()}\n` +
+                (companies.length > 1 ? `\nYou have ${companies.length - 1} other company/companies.` : '');
+            document.getElementById('gameOverScreen').classList.remove('hidden');
+        }
+
+        function closeCompany() {
+            if (companies.length > 1) {
+                companies.splice(activeIdx, 1);
+                activeIdx = Math.max(0, activeIdx - 1);
+                updateSelector();
+                hideAll();
+                showReport();
+            } else {
+                resetGame();
+            }
+        }
+
+        function resetGame() {
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('setupScreen').classList.add('hidden');
+            document.getElementById('difficultyScreen').classList.remove('hidden');
+            companies = [];
+            activeIdx = 0;
+            nextId = 1;
+            selectedBiz = null;
+            selectedDifficulty = null;
+            isHardMode = false;
+            document.querySelectorAll('.business-type').forEach(el => el.classList.remove('selected'));
+            document.querySelectorAll('.difficulty-option').forEach(el => el.classList.remove('selected'));
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('gameScreen').classList.add('hidden');
+            document.getElementById('setupScreen').classList.add('hidden');
+            document.getElementById('difficultyScreen').classList.remove('hidden');
+        });
+    </script>
 </body>
 </html>
